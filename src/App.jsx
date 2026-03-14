@@ -254,7 +254,7 @@ const allCases = [
 ]
 
 function norm(s) {
-  return s.toLowerCase().replace(/[\s\/\-\(\)]/g, "")
+  return s.toLowerCase().replace(/[\s/() -]/g, "")
 }
 
 const ALIASES = [
@@ -307,38 +307,34 @@ const ALIASES = [
 const STEPS = ["Anamnez", "Müayinə", "Analizlər", "Diaqnoz", "Müalicə", "Nəticə"]
 const MAX_QUESTIONS = 5
 
-// ── Claude API call ──────────────────────────────────────────────────────────
-async function askPatient(patientContext, conversation, newQuestion) {
-  const messages = [
-    ...conversation,
-    { role: "user", content: newQuestion }
-  ]
+async function askPatient(patientContext, conversation) {
+  const messages = [...conversation]
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      system: patientContext,
-      messages,
-    }),
-  })
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        system: patientContext,
+        messages,
+      }),
+    })
 
-  const data = await response.json()
-  return data.content?.[0]?.text || "Bağışlayın, başa düşmədim..."
+    const data = await response.json()
+    console.log("API response:", data)
+    return data.content?.[0]?.text || "Bağışlayın, başa düşmədim..."
+  } catch (err) {
+    console.error("API error:", err)
+    return "Bağışlayın, başa düşmədim..."
+  }
 }
 
 export default function App() {
   const [selectedCase, setSelectedCase] = useState(null)
   const [currentStep, setCurrentStep] = useState(0)
 
-  // Anamnesis state
   const [conversation, setConversation] = useState([])
   const [questionInput, setQuestionInput] = useState("")
   const [isAsking, setIsAsking] = useState(false)
@@ -346,7 +342,6 @@ export default function App() {
   const [anamnesisComplete, setAnamnesisComplete] = useState(false)
   const chatEndRef = useRef(null)
 
-  // Other steps state
   const [examined, setExamined] = useState([])
   const [orderedTests, setOrderedTests] = useState([])
   const [testInput, setTestInput] = useState("")
@@ -360,37 +355,46 @@ export default function App() {
   }, [conversation, isAsking])
 
   async function handleAskQuestion() {
-    if (!questionInput.trim() || isAsking || questionsUsed >= MAX_QUESTIONS) return
+  if (!questionInput.trim() || isAsking || questionsUsed >= MAX_QUESTIONS) return
 
-    const question = questionInput.trim()
-    setQuestionInput("")
-    setIsAsking(true)
+  const question = questionInput.trim()
+  setQuestionInput("")
+  setIsAsking(true)
 
-    const newConversation = [...conversation, { role: "user", content: question }]
-    setConversation(newConversation)
-    setQuestionsUsed(q => q + 1)
+  // Show clean question in UI, send enhanced prompt to API
+  const displayMessage = { role: "user", content: question }
+  const apiMessage = { role: "user", content: `[Xəstə kimi cavab ver, Azərbaycan dilində, qısa və təbii. Tibbi termin işlətmə.] ${question}` }
 
-    try {
-      const answer = await askPatient(selectedCase.patientContext, conversation, question)
+  // For display
+  setConversation(prev => [...prev, displayMessage])
+  setQuestionsUsed(q => q + 1)
 
-      // Check if question matched a known key question for scoring
-      const matched = selectedCase.historyQuestions.some(hq =>
-        question.toLowerCase().includes(hq.q.toLowerCase().slice(0, 8)) ||
-        hq.q.toLowerCase().includes(question.toLowerCase().slice(0, 8))
-      )
-      if (matched) setScore(s => s + 5)
+  // For API: use clean history + enhanced current question
+  const cleanHistory = conversation.filter(m =>
+  m.role === "assistant" ? !m.content.includes("Bağışlayın") : true
+)
+  const apiConversation = [...cleanHistory, apiMessage]
 
-      setConversation(prev => [...prev, { role: "assistant", content: answer }])
-    } catch {
-      setConversation(prev => [...prev, { role: "assistant", content: "Bağışlayın, indi cavab verə bilmirəm..." }])
-    }
+  console.log("Sending to Gemini:", JSON.stringify(apiConversation))  // ADD THIS LINE
 
-    setIsAsking(false)
+  try {
+    const answer = await askPatient(selectedCase.patientContext, apiConversation)
+    const matched = selectedCase.historyQuestions.some(hq =>
+      question.toLowerCase().includes(hq.q.toLowerCase().slice(0, 8)) ||
+      hq.q.toLowerCase().includes(question.toLowerCase().slice(0, 8))
+    )
+    if (matched) setScore(s => s + 5)
+    setConversation(prev => [...prev, { role: "assistant", content: answer }])
+  } catch {
+  // don't pollute conversation history with error messages
+}
 
-    if (questionsUsed + 1 >= MAX_QUESTIONS) {
-      setAnamnesisComplete(true)
-    }
+  setIsAsking(false)
+
+  if (questionsUsed + 1 >= MAX_QUESTIONS) {
+    setAnamnesisComplete(true)
   }
+}
 
   function toggle(list, setList, index, points = 0) {
     if (!list.includes(index)) {
@@ -467,7 +471,6 @@ export default function App() {
     setScore(0)
   }
 
-  // ── Case selection screen ────────────────────────────────────────────────
   if (!selectedCase) {
     return (
       <div className="min-h-screen bg-stone-100 p-4">
@@ -507,7 +510,6 @@ export default function App() {
     <div className="min-h-screen bg-stone-100 p-4">
       <div className="max-w-xl mx-auto">
 
-        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <span className="text-xl font-medium text-indigo-700">ClinIQ</span>
           <div className="flex items-center gap-3">
@@ -520,7 +522,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Step bar */}
         <div className="flex rounded-lg overflow-hidden border border-stone-200 mb-4">
           {STEPS.map((step, i) => (
             <div key={step} className={`flex-1 py-2 text-center text-xs font-medium border-r border-stone-200 last:border-r-0
@@ -531,7 +532,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* Patient card */}
         <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
           <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">Xəstənin təqdimatı</p>
           <p className="text-sm text-stone-800 leading-relaxed mb-3">{c.patientSummary}</p>
@@ -554,11 +554,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── Step 0 — Interactive Anamnesis ── */}
         {currentStep === 0 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
-
-            {/* Header row */}
             <div className="flex justify-between items-center mb-3">
               <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">Xəstəyə sual verin</p>
               <span className={`text-xs font-medium px-2 py-1 rounded-full
@@ -569,7 +566,6 @@ export default function App() {
               </span>
             </div>
 
-            {/* Chat window */}
             <div className="bg-stone-50 rounded-xl p-3 mb-3 min-h-32 max-h-72 overflow-y-auto flex flex-col gap-3">
               {conversation.length === 0 && (
                 <p className="text-xs text-stone-400 text-center mt-4">
@@ -604,7 +600,6 @@ export default function App() {
               <div ref={chatEndRef} />
             </div>
 
-            {/* Input row */}
             {!anamnesisComplete && (
               <div className="flex gap-2">
                 <input
@@ -625,7 +620,6 @@ export default function App() {
               </div>
             )}
 
-            {/* Summary when complete */}
             {anamnesisComplete && (
               <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
                 <p className="text-xs font-medium text-amber-700 mb-2">📋 Anamnez tamamlandı — topladığınız məlumat:</p>
@@ -641,7 +635,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Step 1 — Examination */}
         {currentStep === 1 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Hansı sistemi müayinə etmək istərsiniz?</p>
@@ -665,7 +658,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Step 2 — Investigations */}
         {currentStep === 2 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-1">Analiz sifariş edin</p>
@@ -719,7 +711,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Step 3 — Diagnosis */}
         {currentStep === 3 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Diaqnozunuzu daxil edin</p>
@@ -739,7 +730,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Step 4 — Treatment */}
         {currentStep === 4 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Müalicə planınızı daxil edin</p>
@@ -753,7 +743,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Step 5 — Results */}
         {currentStep === 5 && (
           <div className="mb-3">
             <div className={`rounded-xl p-4 mb-3 border ${
@@ -793,7 +782,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Next button */}
         {currentStep < 5 && currentStep !== 3 && (
           <button
             onClick={() => setCurrentStep(s => s + 1)}
