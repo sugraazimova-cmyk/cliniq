@@ -307,27 +307,19 @@ const ALIASES = [
 const STEPS = ["Anamnez", "Müayinə", "Analizlər", "Diaqnoz", "Müalicə", "Nəticə"]
 const MAX_QUESTIONS = 5
 
-async function askPatient(patientContext, conversation) {
-  const messages = [...conversation]
-
+async function askPatient(question, historyQuestions) {
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        system: patientContext,
-        messages,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, historyQuestions }),
     })
-
     const data = await response.json()
     console.log("API response:", data)
-    return data.content?.[0]?.text || "Bağışlayın, başa düşmədim..."
+    return data.content?.[0]?.text || "Bağışlayın, bu sualı başa düşmədim. Başqa cür soruşa bilərsiniz."
   } catch (err) {
     console.error("API error:", err)
-    return "Bağışlayın, başa düşmədim..."
+    return "Bağışlayın, bu sualı başa düşmədim. Başqa cür soruşa bilərsiniz."
   }
 }
 
@@ -378,7 +370,7 @@ export default function App() {
   console.log("Sending to Gemini:", JSON.stringify(apiConversation))  // ADD THIS LINE
 
   try {
-    const answer = await askPatient(selectedCase.patientContext, apiConversation)
+const answer = await askPatient(question, selectedCase.historyQuestions)
     const matched = selectedCase.historyQuestions.some(hq =>
       question.toLowerCase().includes(hq.q.toLowerCase().slice(0, 8)) ||
       hq.q.toLowerCase().includes(question.toLowerCase().slice(0, 8))
