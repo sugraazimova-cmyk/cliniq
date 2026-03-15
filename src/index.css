@@ -43,5 +43,5 @@ input:focus, textarea:focus {
   0%   { transform: scale(1); opacity: 0.55; }
   100% { transform: scale(2.8); opacity: 0; }
 }
-.pulse-dot   { transform-box: fill-box; transform-origin: center; animation: svgPulse 1.5s ease-out infinite; }
-.pulse-dot-2 { transform-box: fill-box; transform-origin: center; animation: svgPulse 1.5s ease-out infinite 0.65s; }
+.pulse-dot   { transform-origin: center; animation: svgPulse 1.5s ease-out infinite; }
+.pulse-dot-2 { transform-origin: center; animation: svgPulse 1.5s ease-out infinite 0.65s; }
