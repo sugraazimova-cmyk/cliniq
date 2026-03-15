@@ -318,12 +318,14 @@ export default function App() {
                           "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
                       <div className="flex justify-between items-start gap-2">
                         <span className="flex-1">{q.q}</span>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TAG_COLOR[q.tag] ?? TAG_COLOR.irrelevant}`}>
-                            {TAG_LABEL[q.tag] ?? q.tag}
-                          </span>
-                          <span className="text-xs text-stone-400">+{q.points ?? 0}</span>
-                        </div>
+                        {selected && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TAG_COLOR[q.tag] ?? TAG_COLOR.irrelevant}`}>
+                              {TAG_LABEL[q.tag] ?? q.tag}
+                            </span>
+                            <span className="text-xs text-stone-400">+{q.points ?? 0}</span>
+                          </div>
+                        )}
                       </div>
                     </button>
                     {selected && (
@@ -442,10 +444,14 @@ export default function App() {
                             {COST_DISPLAY[inv.cost]}
                           </span>
                         )}
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TAG_COLOR[inv.tag] ?? TAG_COLOR.irrelevant}`}>
-                          {TAG_LABEL[inv.tag] ?? inv.tag}
-                        </span>
-                        {selected && <span className="text-emerald-500 text-sm">✓</span>}
+                        {selected && (
+                          <>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TAG_COLOR[inv.tag] ?? TAG_COLOR.irrelevant}`}>
+                              {TAG_LABEL[inv.tag] ?? inv.tag}
+                            </span>
+                            <span className="text-emerald-500 text-sm">✓</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </button>
