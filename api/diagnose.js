@@ -22,10 +22,18 @@ export default async function handler(req) {
       ? `\nAccepted terms: ${diagnosisKeywords.join(", ")}.`
       : ""
 
-    const prompt = `You are a medical education evaluator.
+    const prompt = `You are a medical education evaluator. Be lenient — this is a student typing quickly.
 Correct diagnosis: "${correctDiagnosis}"${keywordHint}
 Student's answer: "${studentDiagnosis}"
-Does the student's answer refer to the same diagnosis? Consider synonyms, abbreviations, and Azerbaijani variants as correct. Reply only YES or NO.`
+
+Reply YES if the student's answer refers to the same diagnosis. Accept:
+- Different capitalisation (e.g. "qiçs" = "QİÇS")
+- Azerbaijani dotted/undotted letter variants (i/İ, ı/I)
+- Abbreviation only without the full name in parentheses (e.g. "QİÇS" = "QİÇS (AIDS)")
+- The English equivalent instead of Azerbaijani (e.g. "AIDS" = "QİÇS")
+- Common synonyms or alternative medical terms for the same condition
+Reply NO only if the student named a clearly different disease.
+Reply only YES or NO.`
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
