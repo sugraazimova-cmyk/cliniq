@@ -377,7 +377,7 @@ export default function App() {
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Xəstəyə toxunun — müayinə edin</p>
             <div className="flex gap-3">
               {/* Patient image with alert dots */}
-              <div className="shrink-0 w-32 relative">
+              <div className="shrink-0 w-32 relative" style={{aspectRatio: "4/7"}}>
                 <img
                   src={getCharacterImage(c)}
                   alt="Xəstə"
