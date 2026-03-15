@@ -59,7 +59,7 @@ const BODY_REGION_MAP = {
 function getCharacterImage(c) {
   const tags = c.tags.join(" ").toLowerCase()
   if (tags.includes("uşaq") || tags.includes("körpə") || tags.includes("child")) {
-    return "/characters/patient.child.png"
+    return "/characters/patient.child.jpg"
   }
   if (tags.includes("qadın") || tags.includes("female")) {
     return "/characters/patient.adult.female.png"
