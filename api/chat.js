@@ -47,6 +47,10 @@ Reply with ONLY a single integer. If none match, reply with -1.`
     const data = await response.json()
     console.log("Gemini response:", JSON.stringify(data).slice(0, 200))
 
+    if (data.error) {
+      return res.status(502).json({ error: `Gemini error ${data.error.code}: ${data.error.message}` })
+    }
+
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
     const index = parseInt(raw, 10)
 

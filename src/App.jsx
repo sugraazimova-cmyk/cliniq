@@ -16,10 +16,10 @@ const allCases = [
     ],
     patientContext: `Sən 36 yaşlı Elnur adlı xəstəsən. 6 aydır yorğunluq, aralıq temperatur, 7 kq çəki itkisi və xronik ishal var. Ağız boşluğunda ağ örtük var, 3 həftədir quru öskürək var. Yük sürücüsüsən, tez-tez uzaq səfərlərə gedirsən. Birdən çox cinsi tərəfdaşın olub. İV narkotik istifadən olmayıb. Qan köçürməsi tarixçən yoxdur. Dəfələrlə "viral infeksiya" və "IBS" diaqnozu ilə müalicə olunmusan, effekt olmayıb. Cavablarını birinci şəxsdə, xəstə kimi ver — məsələn "Mənim..." deyə başla. Qısa və təbii danış, tibbi termin işlətmə.`,
     historyQuestions: [
-      { q: "Peşəniz nədir?", a: "Yük sürücüsüdür, tez-tez uzaq səfərlərə gedir." },
-      { q: "Son bir ildə cinsi həyatınız necə olub?", a: "Birdən çox cinsi tərəfdaşı olduğunu bildirir." },
-      { q: "İV narkotik istifadəniz olubmu?", a: "Xeyr, heç vaxt istifadə etməyib." },
-      { q: "Qan köçürməsi tarixçəniz varmı?", a: "Xeyr." },
+      { q: "Peşəniz nədir?", a: "Yük sürücüsüyəm, tez-tez uzaq səfərlərə gedirəm." },
+      { q: "Son bir ildə cinsi həyatınız necə olub?", a: "Birdən çox cinsi tərəfdaşım olub." },
+      { q: "İV narkotik istifadəniz olubmu?", a: "Xeyr, heç vaxt istifadə etməmişəm." },
+      { q: "Qan köçürməsi tarixçəniz varmı?", a: "Xeyr, belə bir tarixçəm yoxdur." },
     ],
     examinations: [
       { system: "Ağız boşluğu", finding: "Oral kandidiaz (ağ örtük) aşkar edildi — immunosuppressiyanın əlaməti" },
@@ -67,10 +67,10 @@ const allCases = [
     ],
     patientContext: `Sən 22 yaşlı Tural adlı çobansa. Sol əlinin arxasında 7 həftədir böyüyən yara var. Həşərat sancmasından sonra başlayıb, getsə-getdikcə böyüyüb. Topikal antibiotiklər işə yaramayıb. Hər gün mal-qara ilə işləyirsən. Qonşu kənddə oxşar yarası olan birini tanıyırsan. Qızdırman yoxdur, ümumi vəziyyətin qənaətbəxşdir. Cavablarını birinci şəxsdə ver, sadə dillə danış.`,
     historyQuestions: [
-      { q: "Peşəniz nədir, heyvanlarla təmasınız olurmu?", a: "Çobandır, hər gün mal-qara ilə işləyir." },
+      { q: "Peşəniz nədir, heyvanlarla təmasınız olurmu?", a: "Çobanam, hər gün mal-qara ilə işləyirəm." },
       { q: "Yara necə başladı?", a: "Həşərat sancmasından sonra qaşınan şişkinlik kimi başladı." },
       { q: "Antibiotik müalicəsi effektiv oldumu?", a: "Xeyr, topikal antibiotiklər heç bir dəyişiklik etmədi." },
-      { q: "Bölgənizdə oxşar xəstəliklər olubmu?", a: "Qonşu kənddə oxşar yarası olan birini bilir." },
+      { q: "Bölgənizdə oxşar xəstəliklər olubmu?", a: "Qonşu kənddə oxşar yarası olan birini tanıyıram." },
     ],
     examinations: [
       { system: "Dəri yarası", finding: "2 sm xora, qaldırılmış indurasiyalı kənarlar, qranülyar baza — klassik 'vulkan kratı' görünüşü" },
@@ -117,9 +117,9 @@ const allCases = [
     patientContext: `Sən 25 yaşlı Aytən adlı xəstəsən. 12 gündür yüksək qızdırman var (39-40°C), qarın ağrın var, ishal var. Son 2 gündür zəiflik və başın bulanır. 3 həftə əvvəl kənd ərazisinə getmişdin, orada müxtəlif su mənbəyindən içmişdin. Qızdırma yavaş-yavaş başlayıb, tədricən artıb. Son 2 gündür baş ağrın da var. Cavablarını birinci şəxsdə ver, özünü çox xəstə hiss edən biri kimi danış.`,
     historyQuestions: [
       { q: "Qızdırma nə vaxtdan başlayıb?", a: "12 gün əvvəl yavaş-yavaş başlayıb, tədricən artıb." },
-      { q: "Kənd rayonuna səfəriniz olubmu?", a: "3 həftə əvvəl kənd ərazisinə getmişdi." },
-      { q: "İçməli su mənbəyi necədir?", a: "Kənddə müxtəlif su mənbəyindən içib." },
-      { q: "Başqa simptomlar varmı?", a: "Son 2 gündür baş ağrısı və yüngül şüur bulanıqlığı var." },
+      { q: "Kənd rayonuna səfəriniz olubmu?", a: "Bəli, 3 həftə əvvəl kənd ərazisinə getmişdim." },
+      { q: "İçməli su mənbəyi necədir?", a: "Kənddə müxtəlif su mənbəyindən içmişdim." },
+      { q: "Başqa simptomlar varmı?", a: "Bəli, son 2 gündür baş ağrım və yüngül başgicəllənmə var." },
     ],
     examinations: [
       { system: "Ümumi görünüş", finding: "Toksik görünüş, letarji" },
@@ -166,10 +166,10 @@ const allCases = [
     ],
     patientContext: `Sən 32 yaşlı Kamran adlı xəstəsən. Bir həftədir yorğunluğun var, ürəyin bulanır, sidiin tündləşib, gözlərin sarılaşıb. Sarılıqdan 2 həftə əvvəl oynaq ağrın və hərarətin olmuşdu. 3 ay əvvəl qorunmadan cinsi əlaqən olub. Hepatit B əleyhinə peyvənd olmamısan. Assit və ensefalopatiya yoxdur. Cavablarını birinci şəxsdə ver, narahat amma sakit bir adam kimi danış.`,
     historyQuestions: [
-      { q: "Sarılıq nə vaxtdan var?", a: "Təxminən 1 həftədir, gözlər sarılaşıb, sidik tündləşib." },
-      { q: "Əvvəlcə başqa simptomlar oldumu?", a: "Bəli, 2 həftə əvvəl oynaq ağrısı və hərarət olmuşdu." },
-      { q: "Son vaxtlar cinsi əlaqəniz olubmu?", a: "3 ay əvvəl qorunmadan cinsi əlaqə olub." },
-      { q: "Peyvəndlənmisiniz?", a: "Hepatit B əleyhinə peyvənd olmayıb." },
+      { q: "Sarılıq nə vaxtdan var?", a: "Təxminən 1 həftədir, gözlərim sarılaşıb, sidiyim tündləşib." },
+      { q: "Əvvəlcə başqa simptomlar oldumu?", a: "Bəli, 2 həftə əvvəl oynaq ağrım və hərarətim olmuşdu." },
+      { q: "Son vaxtlar cinsi əlaqəniz olubmu?", a: "3 ay əvvəl qorunmadan cinsi əlaqəm olub." },
+      { q: "Peyvəndlənmisiniz?", a: "Xeyr, Hepatit B əleyhinə peyvənd olmamışam." },
     ],
     examinations: [
       { system: "Göz sklerası", finding: "İkterik skleralar — sarılıq aydın görünür" },
@@ -216,10 +216,10 @@ const allCases = [
     ],
     patientContext: `Sən 37 yaşlı Rauf adlı xəstəsən. 18 saat əvvəl görmən bulanıb, göz qapaqların sallanıb, udmağa çətinlik çəkirsən, başın ağrıyır. 18 saat əvvəl ev konservindən ət yemişdin. Qardaşın da eyni yeməyi yeyib və ona da oxşar simptomlar başlayıb. Qızdırman yoxdur. Nəfəs almaq çətinləşib, özünü çox halsız hiss edirsən. Şüurun tam yerindədir. Cavablarını birinci şəxsdə ver, qorxmuş və zəif bir adam kimi danış.`,
     historyQuestions: [
-      { q: "Nə yemişdiniz simptomlardan əvvəl?", a: "18 saat əvvəl ev konservindən ət yemişdir." },
-      { q: "Başqa ailə üzvlərinin simptomları varmı?", a: "Eyni yeməyi yimiş qardaşında da oxşar simptomlar başlayıb." },
-      { q: "Qızdırma var mı?", a: "Xeyr, temperatur normaldır." },
-      { q: "Nəfəs almaqda çətinlik varmı?", a: "Nəfəs dərin və yavaşdır, halsızlıq hiss edir." },
+      { q: "Nə yemişdiniz simptomlardan əvvəl?", a: "18 saat əvvəl ev konservindən ət yemişdim." },
+      { q: "Başqa ailə üzvlərinin simptomları varmı?", a: "Bəli, eyni yeməyi yemiş qardaşımda da oxşar simptomlar başlayıb." },
+      { q: "Qızdırma var mı?", a: "Xeyr, qızdırmam yoxdur." },
+      { q: "Nəfəs almaqda çətinlik varmı?", a: "Bəli, nəfəsim çətinləşib, özümü çox halsız hiss edirəm." },
     ],
     examinations: [
       { system: "Göz", finding: "Sabit genişlənmiş göz bəbəkləri, oftalmoplegia — xarici göz əzələlərinin iflici" },
@@ -307,20 +307,30 @@ const ALIASES = [
 const STEPS = ["Anamnez", "Müayinə", "Analizlər", "Diaqnoz", "Müalicə", "Nəticə"]
 const MAX_QUESTIONS = 5
 
-async function askPatient(question, historyQuestions) {
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, historyQuestions }),
-    })
-    const data = await response.json()
-    console.log("API response:", data)
-    return data.content?.[0]?.text || "Bağışlayın, bu sualı başa düşmədim. Başqa cür soruşa bilərsiniz."
-  } catch (err) {
-    console.error("API error:", err)
-    return "Bağışlayın, bu sualı başa düşmədim. Başqa cür soruşa bilərsiniz."
+function askPatient(question, historyQuestions) {
+  const normalize = (text) =>
+    text.toLowerCase().replace(/[?!.,;:()'"-]/g, "").split(/\s+/).filter(w => w.length > 2)
+
+  const studentWords = new Set(normalize(question))
+
+  let bestScore = 0
+  let bestIndex = -1
+
+  historyQuestions.forEach((hq, i) => {
+    const hqWords = new Set(normalize(hq.q))
+    const intersection = [...studentWords].filter(w => hqWords.has(w)).length
+    const union = new Set([...studentWords, ...hqWords]).size
+    const score = union > 0 ? intersection / union : 0
+    if (score > bestScore) {
+      bestScore = score
+      bestIndex = i
+    }
+  })
+
+  if (bestScore >= 0.12 && bestIndex >= 0) {
+    return historyQuestions[bestIndex].a
   }
+  return "Bağışlayın, bu sualı başa düşmədim. Başqa cür soruşa bilərsiniz."
 }
 
 export default function App() {
@@ -370,7 +380,7 @@ export default function App() {
   console.log("Sending to Gemini:", JSON.stringify(apiConversation))  // ADD THIS LINE
 
   try {
-const answer = await askPatient(question, selectedCase.historyQuestions)
+    const answer = askPatient(question, selectedCase.historyQuestions)
     const matched = selectedCase.historyQuestions.some(hq =>
       question.toLowerCase().includes(hq.q.toLowerCase().slice(0, 8)) ||
       hq.q.toLowerCase().includes(question.toLowerCase().slice(0, 8))
