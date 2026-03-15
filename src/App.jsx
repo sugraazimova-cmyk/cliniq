@@ -1,257 +1,27 @@
 import { useState, useRef, useEffect } from "react"
+import { supabase } from './supabase.js'
+import AuthScreen from './AuthScreen.jsx'
 
-const allCases = [
-  {
-    id: 1,
-    title: "Yorğunluq və arıqlama",
-    specialty: "İnfeksion xəstəliklər",
-    difficulty: "Çətin",
-    patientSummary: "36 yaşlı kişi 6 aydır davam edən yorğunluq, aralıq temperatur, 7 kq çəki itkisi və xronik ishal şikayətləri ilə müraciət edir. Ağız boşluğunda yaralar və 3 həftədir güclənən quru öskürək qeyd edir. Dəfələrlə 'viral infeksiya' və 'IBS' diaqnozu ilə müalicə olunub, effekt yoxdur.",
-    tags: ["36 yaş · Kişi", "Çəki itkisi", "Xronik ishal"],
-    vitals: [
-      { label: "Temp", value: "37.8°C" },
-      { label: "Nəbz", value: "102" },
-      { label: "AT", value: "108/70" },
-      { label: "SpO2", value: "94%" },
-    ],
-    patientContext: `Sən 36 yaşlı Elnur adlı xəstəsən. 6 aydır yorğunluq, aralıq temperatur, 7 kq çəki itkisi və xronik ishal var. Ağız boşluğunda ağ örtük var, 3 həftədir quru öskürək var. Yük sürücüsüsən, tez-tez uzaq səfərlərə gedirsən. Birdən çox cinsi tərəfdaşın olub. İV narkotik istifadən olmayıb. Qan köçürməsi tarixçən yoxdur. Dəfələrlə "viral infeksiya" və "IBS" diaqnozu ilə müalicə olunmusan, effekt olmayıb. Cavablarını birinci şəxsdə, xəstə kimi ver — məsələn "Mənim..." deyə başla. Qısa və təbii danış, tibbi termin işlətmə.`,
-    historyQuestions: [
-      { q: "Peşəniz nədir?", a: "Yük sürücüsüyəm, tez-tez uzaq səfərlərə gedirəm." },
-      { q: "Son bir ildə cinsi həyatınız necə olub?", a: "Birdən çox cinsi tərəfdaşım olub." },
-      { q: "İV narkotik istifadəniz olubmu?", a: "Xeyr, heç vaxt istifadə etməmişəm." },
-      { q: "Qan köçürməsi tarixçəniz varmı?", a: "Xeyr, belə bir tarixçəm yoxdur." },
-    ],
-    examinations: [
-      { system: "Ağız boşluğu", finding: "Oral kandidiaz (ağ örtük) aşkar edildi — immunosuppressiyanın əlaməti" },
-      { system: "Limfa düyünləri", finding: "Servikal və aksiller limfadenopatiya — ümumiləşmiş" },
-      { system: "Ağciyərlər", finding: "Auskultasiyada ikitərəfli xırıltı eşidilir" },
-      { system: "Dəri", finding: "Səpgi və sarılıq yoxdur" },
-    ],
-    investigations: [
-      { test: "Tam qan analizi", result: "Normositar anemiya, CRP yüksək", relevant: true },
-      { test: "Anti-HIV (ELISA)", result: "Müsbət — dərhal Western Blot ilə təsdiq lazımdır", relevant: true },
-      { test: "CD4 sayı", result: "CD4: 180 hüceyrə/μL (normadan kəskin aşağı)", relevant: true },
-      { test: "Döş qəfəsi rentgeni", result: "İkitərəfli interstisial infiltratlar — PCP ehtimalı", relevant: true },
-      { test: "Qaraciyər fermentləri", result: "ALT/AST normada", relevant: false },
-      { test: "Sidik analizi", result: "Normada", relevant: false },
-    ],
-    correctDiagnosis: "QİÇS (AIDS)",
-    diagnosisKeywords: ["qiçs", "aids", "hiv", "immunodefisit"],
-    explanationPoints: [
-      "Anti-HIV müsbət, CD4 180 — AIDS mərhələsi",
-      "Oral kandidiaz — immunosupressiyanın göstəricisi",
-      "İkitərəfli ağciyər infiltratları — PCP pnevmoniyası",
-      "Risk faktoru: çoxlu cinsi tərəfdaş",
-      "Uzunmüddətli müalicəyə cavabsız simptomlar",
-    ],
-    treatmentPoints: [
-      "Antiretroviral terapiya (ART): Tenofovir + Emtrisitabin + Efavirenz",
-      "PCP profilaktikası: Kotrimoksazol",
-      "Fırsatçı infeksiyaların müalicəsi",
-      "CD4 və viral yük monitorinqi hər 3 ayda bir",
-      "Psixoloji dəstək və yaxın kontaktların müayinəsi",
-    ],
-  },
-  {
-    id: 2,
-    title: "Əldə yaralaşma",
-    specialty: "İnfeksion xəstəliklər",
-    difficulty: "Orta",
-    patientSummary: "22 yaşlı çoban sol əlinin arxasında 7 həftədir yavaş-yavaş böyüyən yara ilə müraciət edir. Mal-qara yanında həşərat sancmasından sonra qaşınan papul kimi başlayıb, tədricən xoralanıb. Topikal antibiotiklər kömək etməyib.",
-    tags: ["22 yaş · Kişi", "Dəri yarası", "Kənd bölgəsi"],
-    vitals: [
-      { label: "Temp", value: "36.9°C" },
-      { label: "Nəbz", value: "76" },
-      { label: "AT", value: "120/78" },
-      { label: "SpO2", value: "99%" },
-    ],
-    patientContext: `Sən 22 yaşlı Tural adlı çobansa. Sol əlinin arxasında 7 həftədir böyüyən yara var. Həşərat sancmasından sonra başlayıb, getsə-getdikcə böyüyüb. Topikal antibiotiklər işə yaramayıb. Hər gün mal-qara ilə işləyirsən. Qonşu kənddə oxşar yarası olan birini tanıyırsan. Qızdırman yoxdur, ümumi vəziyyətin qənaətbəxşdir. Cavablarını birinci şəxsdə ver, sadə dillə danış.`,
-    historyQuestions: [
-      { q: "Peşəniz nədir, heyvanlarla təmasınız olurmu?", a: "Çobanam, hər gün mal-qara ilə işləyirəm." },
-      { q: "Yara necə başladı?", a: "Həşərat sancmasından sonra qaşınan şişkinlik kimi başladı." },
-      { q: "Antibiotik müalicəsi effektiv oldumu?", a: "Xeyr, topikal antibiotiklər heç bir dəyişiklik etmədi." },
-      { q: "Bölgənizdə oxşar xəstəliklər olubmu?", a: "Qonşu kənddə oxşar yarası olan birini tanıyıram." },
-    ],
-    examinations: [
-      { system: "Dəri yarası", finding: "2 sm xora, qaldırılmış indurasiyalı kənarlar, qranülyar baza — klassik 'vulkan kratı' görünüşü" },
-      { system: "Limfa düyünləri", finding: "Kiçik, ağrısız epitroklear limfa düyünü palpasiya olunur" },
-      { system: "Ümumi vəziyyət", finding: "Qızdırma yoxdur, ümumi vəziyyət qaneedicidir" },
-    ],
-    investigations: [
-      { test: "Leishmania serologiyası (rK39)", result: "Müsbət — kutanöz leişmaniyoza dəlalət edir", relevant: true },
-      { test: "Yara sürtüntüsü (Giemsa)", result: "Amastigotlar görünür — Leishmania spp. təsdiqləndi", relevant: true },
-      { test: "Tam qan analizi", result: "Normada, ESR yüngül yüksək", relevant: true },
-      { test: "Göbələk mədəniyyəti", result: "Mənfi", relevant: false },
-      { test: "TST (tuberkulin)", result: "Mənfi", relevant: false },
-    ],
-    correctDiagnosis: "Kutanöz leişmaniyoz",
-    diagnosisKeywords: ["leişmaniyoz", "leishmania", "kutanöz", "dəri leişmaniyoz"],
-    explanationPoints: [
-      "Çoban — heyvanlarla təmas, həşərat sancması riski yüksək",
-      "Klassik indurasiyalı kənarlı xora görünüşü",
-      "Antibiotiklərə cavabsızlıq — bakterial deyil",
-      "rK39 serologiyası və Giemsa boyası müsbət",
-      "Ağrısız limfadenopatiya — leişmaniyoz üçün xarakterik",
-    ],
-    treatmentPoints: [
-      "Meglumin antimonat (Glucantime) — lokal inyeksiya",
-      "Ağır hallarda: Amfoterisin B",
-      "Yara baxımı və infeksiyanın qarşısının alınması",
-      "Həşəratlara qarşı qoruyucu tədbirlər",
-      "6 ay sonra nəzarət müayinəsi",
-    ],
-  },
-  {
-    id: 3,
-    title: "Uzunsürən qızdırma",
-    specialty: "İnfeksion xəstəliklər",
-    difficulty: "Çətin",
-    patientSummary: "25 yaşlı qadın 12 gündür davam edən qızdırma (39–40°C), qarın ağrısı və ishal şikayətləri ilə təcili yardıma müraciət edir. Son iki gündür artan zəiflik və şüur bulanıqlığı qeyd edir.",
-    tags: ["25 yaş · Qadın", "12 günlük qızdırma", "Qarın ağrısı"],
-    vitals: [
-      { label: "Temp", value: "39.8°C" },
-      { label: "Nəbz", value: "88" },
-      { label: "AT", value: "100/65" },
-      { label: "SpO2", value: "96%" },
-    ],
-    patientContext: `Sən 25 yaşlı Aytən adlı xəstəsən. 12 gündür yüksək qızdırman var (39-40°C), qarın ağrın var, ishal var. Son 2 gündür zəiflik və başın bulanır. 3 həftə əvvəl kənd ərazisinə getmişdin, orada müxtəlif su mənbəyindən içmişdin. Qızdırma yavaş-yavaş başlayıb, tədricən artıb. Son 2 gündür baş ağrın da var. Cavablarını birinci şəxsdə ver, özünü çox xəstə hiss edən biri kimi danış.`,
-    historyQuestions: [
-      { q: "Qızdırma nə vaxtdan başlayıb?", a: "12 gün əvvəl yavaş-yavaş başlayıb, tədricən artıb." },
-      { q: "Kənd rayonuna səfəriniz olubmu?", a: "Bəli, 3 həftə əvvəl kənd ərazisinə getmişdim." },
-      { q: "İçməli su mənbəyi necədir?", a: "Kənddə müxtəlif su mənbəyindən içmişdim." },
-      { q: "Başqa simptomlar varmı?", a: "Bəli, son 2 gündür baş ağrım və yüngül başgicəllənmə var." },
-    ],
-    examinations: [
-      { system: "Ümumi görünüş", finding: "Toksik görünüş, letarji" },
-      { system: "Ürək-damar", finding: "Nisbi bradikardiya — qızdırmaya uyğun olmayan yavaş nəbz (xarakterik əlamət)" },
-      { system: "Qarın", finding: "Sağ qasıq nahiyəsində ağrı, qarın şişkinliyi, bağırsaq səsləri azalmış" },
-    ],
-    investigations: [
-      { test: "Qan mədəniyyəti", result: "Salmonella typhi üreməsi müsbət — tifozu təsdiqlər", relevant: true },
-      { test: "Tam qan analizi", result: "Lökopenia: WBC 3.2×10⁹/L — xarakterik tapıntı", relevant: true },
-      { test: "Widal testi", result: "Anti-O titrləri yüksək", relevant: true },
-      { test: "Qarın rentgeni", result: "Hava-maye səviyyələri, pnevmoperitoneum şübhəsi — perforasiya riski!", relevant: true },
-      { test: "ALT/AST", result: "Yüngül yüksəlmə", relevant: true },
-      { test: "HBsAg", result: "Mənfi", relevant: false },
-    ],
-    correctDiagnosis: "Qarın tifi (Typhoid fever)",
-    diagnosisKeywords: ["tif", "typhoid", "salmonella", "qarın tifi"],
-    explanationPoints: [
-      "Salmonella typhi qan mədəniyyətində üremişdir",
-      "Nisbi bradikardiya — tif üçün klassik əlamət",
-      "Lökopenia — bakterial infeksiya üçün qeyri-adi, tifə xasdır",
-      "Kənd ərazisi, şübhəli su mənbəyi — risk faktoru",
-      "Perforasiya riski — pnevmoperitoneum şübhəsi cərrahi konsultasiya tələb edir",
-    ],
-    treatmentPoints: [
-      "Sefalosporinlər (Seftriakson 2q/gün IV) — birinci sıra",
-      "Alternativ: Siprofloksasin (floroquinolon həssaslığı varsa)",
-      "Yataq rejimi, hidrasiya",
-      "Perforasiya şübhəsində cərrahi konsultasiya",
-      "Epidemioloji araşdırma və kontaktların izlənməsi",
-    ],
-  },
-  {
-    id: 4,
-    title: "Sarılıq və qaraciyər şişməsi",
-    specialty: "İnfeksion xəstəliklər",
-    difficulty: "Orta",
-    patientSummary: "32 yaşlı kişi bir həftədir yorğunluq, ürək bulanması, tünd sidik və gözlərin sarıması ilə müraciət edir. Sarılıq başlamazdan əvvəl oynaq ağrısı və aşağı dərəcəli qızdırma olub. Üç ay əvvəl qorunmadan cinsi əlaqə tarixçəsi var.",
-    tags: ["32 yaş · Kişi", "Sarılıq", "Qaraciyər"],
-    vitals: [
-      { label: "Temp", value: "37.4°C" },
-      { label: "Nəbz", value: "82" },
-      { label: "AT", value: "122/76" },
-      { label: "SpO2", value: "98%" },
-    ],
-    patientContext: `Sən 32 yaşlı Kamran adlı xəstəsən. Bir həftədir yorğunluğun var, ürəyin bulanır, sidiin tündləşib, gözlərin sarılaşıb. Sarılıqdan 2 həftə əvvəl oynaq ağrın və hərarətin olmuşdu. 3 ay əvvəl qorunmadan cinsi əlaqən olub. Hepatit B əleyhinə peyvənd olmamısan. Assit və ensefalopatiya yoxdur. Cavablarını birinci şəxsdə ver, narahat amma sakit bir adam kimi danış.`,
-    historyQuestions: [
-      { q: "Sarılıq nə vaxtdan var?", a: "Təxminən 1 həftədir, gözlərim sarılaşıb, sidiyim tündləşib." },
-      { q: "Əvvəlcə başqa simptomlar oldumu?", a: "Bəli, 2 həftə əvvəl oynaq ağrım və hərarətim olmuşdu." },
-      { q: "Son vaxtlar cinsi əlaqəniz olubmu?", a: "3 ay əvvəl qorunmadan cinsi əlaqəm olub." },
-      { q: "Peyvəndlənmisiniz?", a: "Xeyr, Hepatit B əleyhinə peyvənd olmamışam." },
-    ],
-    examinations: [
-      { system: "Göz sklerası", finding: "İkterik skleralar — sarılıq aydın görünür" },
-      { system: "Qarın", finding: "Qaraciyər yüngül böyümüş, kənarı düzgün, ağrılı" },
-      { system: "Ümumi", finding: "Assit və ensefalopatiya yoxdur — qeyri-fulminant kurs" },
-    ],
-    investigations: [
-      { test: "ALT/AST", result: "ALT: 1200 U/L, AST: 950 U/L — kəskin hepatoselülyar zədə", relevant: true },
-      { test: "HBsAg", result: "Müsbət — aktiv HBV infeksiyası", relevant: true },
-      { test: "Anti-HBc IgM", result: "Müsbət — kəskin infeksiya göstəricisi", relevant: true },
-      { test: "Anti-HBs", result: "Mənfi — immunitet yoxdur", relevant: true },
-      { test: "Ümumi bilirubin", result: "6.8 mg/dL (yüksək)", relevant: true },
-      { test: "Anti-HCV", result: "Mənfi", relevant: false },
-    ],
-    correctDiagnosis: "Kəskin Hepatit B",
-    diagnosisKeywords: ["hepatit b", "hbv", "kəskin hepatit", "hepatit"],
-    explanationPoints: [
-      "HBsAg müsbət + Anti-HBc IgM müsbət = kəskin HBV",
-      "ALT 1200 U/L — kəskin hepatoselülyar zədə",
-      "3 ay əvvəl qorunmadan cinsi əlaqə — inkubasiya dövrünə uyğun",
-      "Peyvəndsizlik — risk faktoru",
-      "Assit/ensefalopatiya yoxdur — fulminant deyil",
-    ],
-    treatmentPoints: [
-      "Çox hallarda kəskin HBV özbaşına keçir — dəstəkləyici müalicə",
-      "İstirahət, qaraciyərə zəhərli maddələrdən çəkinmə (alkohol, hepatotoksik dərmanlar)",
-      "Fulminant hepatit varsa: Tenofovir",
-      "Qaraciyər funksiyasına həftəlik nəzarət",
-      "Yaxın kontaktların peyvəndi tövsiyə edilir",
-    ],
-  },
-  {
-    id: 5,
-    title: "Göz düşməsi və udma çətinliyi",
-    specialty: "İnfeksion xəstəliklər",
-    difficulty: "Çətin",
-    patientSummary: "37 yaşlı kişi 18 saat əvvəl başlayan görmə bulanıqlığı, göz qapağı sallanması (ptoz), udma çətinliyi və baş ağrısı ilə müraciət edir. Kənd ərazisindən gətirilən ev konservindən ət yemişdir.",
-    tags: ["37 yaş · Kişi", "Neyroloji simptomlar", "Ev konservi"],
-    vitals: [
-      { label: "Temp", value: "36.6°C" },
-      { label: "Nəbz", value: "68" },
-      { label: "AT", value: "115/72" },
-      { label: "SpO2", value: "96%" },
-    ],
-    patientContext: `Sən 37 yaşlı Rauf adlı xəstəsən. 18 saat əvvəl görmən bulanıb, göz qapaqların sallanıb, udmağa çətinlik çəkirsən, başın ağrıyır. 18 saat əvvəl ev konservindən ət yemişdin. Qardaşın da eyni yeməyi yeyib və ona da oxşar simptomlar başlayıb. Qızdırman yoxdur. Nəfəs almaq çətinləşib, özünü çox halsız hiss edirsən. Şüurun tam yerindədir. Cavablarını birinci şəxsdə ver, qorxmuş və zəif bir adam kimi danış.`,
-    historyQuestions: [
-      { q: "Nə yemişdiniz simptomlardan əvvəl?", a: "18 saat əvvəl ev konservindən ət yemişdim." },
-      { q: "Başqa ailə üzvlərinin simptomları varmı?", a: "Bəli, eyni yeməyi yemiş qardaşımda da oxşar simptomlar başlayıb." },
-      { q: "Qızdırma var mı?", a: "Xeyr, qızdırmam yoxdur." },
-      { q: "Nəfəs almaqda çətinlik varmı?", a: "Bəli, nəfəsim çətinləşib, özümü çox halsız hiss edirəm." },
-    ],
-    examinations: [
-      { system: "Göz", finding: "Sabit genişlənmiş göz bəbəkləri, oftalmoplegia — xarici göz əzələlərinin iflici" },
-      { system: "Ağız/boğaz", finding: "Selikli qişalar quru, dysphonia (zəif səs), udma çətin" },
-      { system: "Əzələ/reflektor", finding: "Ümumiləşmiş əzələ zəifliyi, hipotoniya, dərin vətər refleksləri azalmış" },
-      { system: "Şüur", finding: "Şüur tam qorunub — botulizm üçün xarakterik" },
-    ],
-    investigations: [
-      { test: "Botulinum toksini (qan/nəcis)", result: "Müsbət — Clostridium botulinum toksini təsdiqləndi", relevant: true },
-      { test: "Elektromiaqrafiya (EMG)", result: "Neyromuskular blok — botulizm üçün xarakterik pattern", relevant: true },
-      { test: "Spirometriya / tənəffüs funksiyası", result: "FVC azalıb — tənəffüs dəstəyi lazım ola bilər", relevant: true },
-      { test: "KT beyin", result: "Normada — struktur patologiya yoxdur", relevant: false },
-      { test: "Lumbal punksiya", result: "Normada — Guillain-Barré istisna olundu", relevant: false },
-    ],
-    correctDiagnosis: "Botulizm",
-    diagnosisKeywords: ["botulizm", "botulinum", "clostridium botulinum"],
-    explanationPoints: [
-      "Ev konservi — Clostridium botulinum üçün əsas mənbə",
-      "Ptoz, oftalmoplegia, udma çətinliyi — kranial sinir tutulması",
-      "Qızdırma YOX — toksinin birbaşa təsiri, infeksiya deyil",
-      "Şüur qorunub — botulizm üçün xarakterik",
-      "Ailə üzvlərinin eyni yeməkdən xəstələnməsi — sübut",
-    ],
-    treatmentPoints: [
-      "Botulinum antitoksini (trivalent) — mümkün qədər tez verin",
-      "Tənəffüs dəstəyi — tənəffüs iflici riski var, ICU-ya qəbul",
-      "Mədə yuma (yenilik yenicə qəbul edilmişsə)",
-      "Dəstəkləyici qulluq — bəzən həftələr-aylar sürmür",
-      "Epidemioloji bildiriş — qalan konserv məhsullarını imha et",
-    ],
-  },
-]
+
+function mapCase(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    specialty: row.specialty,
+    difficulty: row.difficulty,
+    patientSummary: row.patient_summary,
+    tags: row.tags,
+    vitals: row.vitals,
+    patientContext: row.patient_context,
+    historyQuestions: row.history_questions,
+    examinations: row.examinations,
+    investigations: row.investigations,
+    correctDiagnosis: row.correct_diagnosis,
+    diagnosisKeywords: row.diagnosis_keywords,
+    explanationPoints: row.explanation_points,
+    treatmentPoints: row.treatment_points,
+  }
+}
 
 function norm(s) {
   return s.toLowerCase().replace(/[\s/() -]/g, "")
@@ -304,6 +74,13 @@ const ALIASES = [
   ["sidik", "sidik"],
 ]
 
+const FALLBACK_RESPONSES = [
+  "Düzünü desəm, nə demək istədiyinizi tam başa düşmədim...",
+  "Bağışlayın, bu barədə nə cavab verəcəyimi bilmirəm.",
+  "Yəni... necə izah edim? Başqa cür soruşa bilərsinizmi?",
+  "Həkimə bu sualı vermək ağlıma gəlməmişdi, bilmirəm ki...",
+]
+
 const STEPS = ["Anamnez", "Müayinə", "Analizlər", "Diaqnoz", "Müalicə", "Nəticə"]
 const MAX_QUESTIONS = 5
 
@@ -330,10 +107,45 @@ function askPatient(question, historyQuestions) {
   if (bestScore >= 0.12 && bestIndex >= 0) {
     return historyQuestions[bestIndex].a
   }
-  return "Bağışlayın, bu sualı başa düşmədim. Başqa cür soruşa bilərsiniz."
+  return FALLBACK_RESPONSES[Math.floor(Math.random() * FALLBACK_RESPONSES.length)]
 }
 
 export default function App() {
+  const [session, setSession] = useState(undefined)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => setSession(s))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const [cases, setCases] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (!session) {
+      setCases([])
+      setLoading(true)
+      setError(null)
+      return
+    }
+    supabase
+      .from('cases')
+      .select('*')
+      .eq('is_published', true)
+      .order('id')
+      .then(({ data, error: err }) => {
+        if (err) {
+          console.error('Failed to load cases:', err)
+          setError(err.message)
+        } else {
+          setCases(data.map(mapCase))
+        }
+        setLoading(false)
+      })
+  }, [session])
+
   const [selectedCase, setSelectedCase] = useState(null)
   const [currentStep, setCurrentStep] = useState(0)
 
@@ -473,23 +285,50 @@ export default function App() {
     setScore(0)
   }
 
+  if (session === undefined) return (
+    <div className="min-h-screen bg-stone-100 flex items-center justify-center">
+      <p className="text-stone-400 text-sm">Yüklənir...</p>
+    </div>
+  )
+
+  if (!session) return <AuthScreen />
+
+  if (loading) return (
+    <div className="min-h-screen bg-stone-100 flex items-center justify-center">
+      <p className="text-stone-400 text-sm">Yüklənir...</p>
+    </div>
+  )
+
+  if (error) return (
+    <div className="min-h-screen bg-stone-100 flex items-center justify-center">
+      <p className="text-red-500 text-sm">Xəta: {error}</p>
+    </div>
+  )
+
   if (!selectedCase) {
     return (
       <div className="min-h-screen bg-stone-100 p-4">
         <div className="max-w-xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <span className="text-2xl font-medium text-indigo-700">ClinIQ</span>
-            <span className="text-sm text-stone-400">Azərbaycan Tibbi Simulator</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-stone-400">Azərbaycan Tibbi Simulator</span>
+              <button
+                onClick={() => supabase.auth.signOut()}
+                className="text-xs text-stone-400 hover:text-stone-600">
+                Çıxış
+              </button>
+            </div>
           </div>
-          <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Xəstə seçin</p>
-          {allCases.map((c) => (
+          <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Kliniki hal seçin</p>
+          {cases.map((c) => (
             <div
               key={c.id}
               onClick={() => setSelectedCase(c)}
               className="bg-white border border-stone-200 rounded-xl p-4 mb-3 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
             >
               <div className="flex justify-between items-start mb-1">
-                <p className="font-medium text-stone-800">{c.title}</p>
+                <p className="font-medium text-stone-800">Kliniki hal {c.id} — {c.specialty}</p>
                 <span className={`text-xs font-medium px-2 py-1 rounded-full
                   ${c.difficulty === "Çətin" ? "bg-red-100 text-red-700" :
                     c.difficulty === "Orta" ? "bg-amber-100 text-amber-700" :
@@ -497,7 +336,7 @@ export default function App() {
                   {c.difficulty}
                 </span>
               </div>
-              <p className="text-xs text-stone-400">{c.specialty}</p>
+              <p className="text-xs text-stone-400">{c.tags[0]} · {c.tags[1]}</p>
             </div>
           ))}
         </div>
