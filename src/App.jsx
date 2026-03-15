@@ -37,6 +37,24 @@ const TAG_COLOR = {
 const COST_DISPLAY = { 1: "₼", 2: "₼₼", 3: "₼₼₼" }
 const COST_COLOR   = { 1: "bg-green-100 text-green-700", 2: "bg-amber-100 text-amber-700", 3: "bg-red-100 text-red-700" }
 
+const BODY_REGION_MAP = {
+  "Baş/Beyin":       { x: 60,  y: 16  },
+  "Ağız boşluğu":    { x: 60,  y: 30  },
+  "Boyun":           { x: 60,  y: 42  },
+  "Limfa düyünləri": { x: 76,  y: 48  },
+  "Ağciyərlər":      { x: 44,  y: 74  },
+  "Ürək":            { x: 44,  y: 82  },
+  "Qarın boşluğu":   { x: 60,  y: 108 },
+  "Qaraciyər":       { x: 68,  y: 102 },
+  "Dalaq":           { x: 48,  y: 102 },
+  "Dəri":            { x: 96,  y: 78  },
+  "Sol çiyin":       { x: 18,  y: 58  },
+  "Sağ çiyin":       { x: 102, y: 58  },
+  "Sol diz":         { x: 40,  y: 185 },
+  "Sağ diz":         { x: 80,  y: 185 },
+  "default":         { x: 60,  y: 120 },
+}
+
 const STEPS = ["Anamnez", "Müayinə", "Analizlər", "Diaqnoz", "Müalicə", "Nəticə"]
 
 export default function App() {
@@ -344,23 +362,57 @@ export default function App() {
         {/* ── Step 1: Examination ───────────────────────────────────────── */}
         {currentStep === 1 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
-            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Hansı sistemi müayinə etmək istərsiniz?</p>
-            <div className="flex flex-col gap-2">
-              {c.examinations.map((item, i) => (
-                <div key={i}>
-                  <button onClick={() => toggleExam(i)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
-                      ${selectedExams.includes(i) ? "bg-indigo-50 border-indigo-200 text-indigo-800"
-                        : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
-                    {item.system}
-                  </button>
-                  {selectedExams.includes(i) && (
-                    <p className="text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 mt-1 border border-emerald-200 fade-up">
-                      {item.finding}
-                    </p>
-                  )}
-                </div>
-              ))}
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Xəstəyə toxunun — müayinə edin</p>
+            <div className="flex gap-3 min-h-60">
+              {/* Patient SVG */}
+              <div className="shrink-0 flex items-start justify-center w-28">
+                <svg viewBox="0 0 120 240" width="112" height="224" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Body (breathing) */}
+                  <g className="breathe">
+                    <circle cx="60" cy="18" r="14" fill="#d6d3d1"/>
+                    <rect x="54" y="31" width="12" height="10" rx="3" fill="#d6d3d1"/>
+                    <rect x="28" y="41" width="64" height="68" rx="10" fill="#e7e5e4"/>
+                    <rect x="10" y="44" width="18" height="54" rx="9" fill="#d6d3d1"/>
+                    <rect x="92" y="44" width="18" height="54" rx="9" fill="#d6d3d1"/>
+                    <rect x="32" y="109" width="22" height="72" rx="9" fill="#d6d3d1"/>
+                    <rect x="66" y="109" width="22" height="72" rx="9" fill="#d6d3d1"/>
+                  </g>
+                  {/* Alert dots */}
+                  {c.examinations.map((item, i) => {
+                    const pos = BODY_REGION_MAP[item.system] ?? BODY_REGION_MAP.default
+                    const selected = selectedExams.includes(i)
+                    return (
+                      <g key={i} onClick={() => toggleExam(i)} style={{cursor: selected ? "default" : "pointer"}}>
+                        {!selected ? (
+                          <>
+                            <circle cx={pos.x} cy={pos.y} r="7"   fill="#ef4444" className="pulse-dot"/>
+                            <circle cx={pos.x} cy={pos.y} r="7"   fill="#ef4444" className="pulse-dot-2"/>
+                            <circle cx={pos.x} cy={pos.y} r="5.5" fill="#ef4444"/>
+                          </>
+                        ) : (
+                          <>
+                            <circle cx={pos.x} cy={pos.y} r="6" fill="#10b981"/>
+                            <text x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="middle" fontSize="7" fill="white">✓</text>
+                          </>
+                        )}
+                      </g>
+                    )
+                  })}
+                </svg>
+              </div>
+              {/* Findings feed */}
+              <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto max-h-56">
+                {selectedExams.length === 0 ? (
+                  <p className="text-xs text-stone-300 mt-2">Xəstəyə toxunun...</p>
+                ) : (
+                  selectedExams.map(idx => (
+                    <div key={idx} className="bg-white border rounded-lg p-2 shadow-sm border-l-4 border-l-emerald-400 fade-in">
+                      <p className="text-xs font-medium text-stone-700">{c.examinations[idx].system}</p>
+                      <p className="text-xs text-stone-500 mt-0.5 leading-snug">{c.examinations[idx].finding}</p>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}
