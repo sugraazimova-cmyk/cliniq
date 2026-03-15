@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { supabase } from './supabase.js'
 import AuthScreen from './AuthScreen.jsx'
-
 
 function mapCase(row) {
   return {
@@ -16,99 +15,29 @@ function mapCase(row) {
     historyQuestions: row.history_questions,
     examinations: row.examinations,
     investigations: row.investigations,
+    differentialDiagnosis: row.differential_diagnosis,
     correctDiagnosis: row.correct_diagnosis,
     diagnosisKeywords: row.diagnosis_keywords,
     explanationPoints: row.explanation_points,
     treatmentPoints: row.treatment_points,
+    treatmentOptions: row.treatment_options ?? [],
   }
 }
 
-function norm(s) {
-  return s.toLowerCase().replace(/[\s/() -]/g, "")
+const MAX_ANAMNESIS_PICKS = 5
+const MAX_INVESTIGATION_PICKS = 5
+const MAX_DIFFERENTIAL_PICKS = 3
+
+const TAG_LABEL = { essential: "Vacib", relevant: "Faydalı", irrelevant: "Lazımsız" }
+const TAG_COLOR = {
+  essential:  "bg-red-100 text-red-700",
+  relevant:   "bg-amber-100 text-amber-700",
+  irrelevant: "bg-stone-100 text-stone-400",
 }
-
-const ALIASES = [
-  ["alt", "altast"],
-  ["ast", "altast"],
-  ["altast", "altast"],
-  ["ferment", "ferment"],
-  ["qaraciyərferment", "ferment"],
-  ["hbsag", "hbsag"],
-  ["antihbc", "antihbc"],
-  ["hbc", "antihbc"],
-  ["antihbs", "antihbs"],
-  ["hbs", "antihbs"],
-  ["bilirubin", "bilirubin"],
-  ["antihiv", "antihiv"],
-  ["hiv", "antihiv"],
-  ["cd4", "cd4"],
-  ["rentgen", "rentgen"],
-  ["cxr", "rentgen"],
-  ["döşrentgen", "döşqəfəsi"],
-  ["tamqan", "tamqan"],
-  ["qananalizi", "tamqan"],
-  ["klinikalıqan", "tamqan"],
-  ["leishmania", "leishmania"],
-  ["leişmania", "leishmania"],
-  ["rk39", "rk39"],
-  ["giemsa", "giemsa"],
-  ["yarasürtüntüsü", "sürtüntü"],
-  ["qanmədəniyyəti", "mədəniyyəti"],
-  ["hemokültur", "mədəniyyəti"],
-  ["widal", "widal"],
-  ["qarınrentgen", "qarınrentgeni"],
-  ["botulinum", "botulinum"],
-  ["emg", "emg"],
-  ["elektromiaqrafiya", "emg"],
-  ["spirometriya", "spirometriya"],
-  ["tənəffüs", "spirometriya"],
-  ["kt", "ktbeyin"],
-  ["ktbeyin", "ktbeyin"],
-  ["lumbal", "lumbal"],
-  ["lp", "lumbal"],
-  ["antihcv", "antihcv"],
-  ["hepatitc", "antihcv"],
-  ["göbələk", "göbələk"],
-  ["tst", "tst"],
-  ["tuberkulin", "tst"],
-  ["sidik", "sidik"],
-]
-
-const FALLBACK_RESPONSES = [
-  "Düzünü desəm, nə demək istədiyinizi tam başa düşmədim...",
-  "Bağışlayın, bu barədə nə cavab verəcəyimi bilmirəm.",
-  "Yəni... necə izah edim? Başqa cür soruşa bilərsinizmi?",
-  "Həkimə bu sualı vermək ağlıma gəlməmişdi, bilmirəm ki...",
-]
+const COST_DISPLAY = { 1: "₼", 2: "₼₼", 3: "₼₼₼" }
+const COST_COLOR   = { 1: "bg-green-100 text-green-700", 2: "bg-amber-100 text-amber-700", 3: "bg-red-100 text-red-700" }
 
 const STEPS = ["Anamnez", "Müayinə", "Analizlər", "Diaqnoz", "Müalicə", "Nəticə"]
-const MAX_QUESTIONS = 5
-
-function askPatient(question, historyQuestions) {
-  const normalize = (text) =>
-    text.toLowerCase().replace(/[?!.,;:()'"-]/g, "").split(/\s+/).filter(w => w.length > 2)
-
-  const studentWords = new Set(normalize(question))
-
-  let bestScore = 0
-  let bestIndex = -1
-
-  historyQuestions.forEach((hq, i) => {
-    const hqWords = new Set(normalize(hq.q))
-    const intersection = [...studentWords].filter(w => hqWords.has(w)).length
-    const union = new Set([...studentWords, ...hqWords]).size
-    const score = union > 0 ? intersection / union : 0
-    if (score > bestScore) {
-      bestScore = score
-      bestIndex = i
-    }
-  })
-
-  if (bestScore >= 0.12 && bestIndex >= 0) {
-    return historyQuestions[bestIndex].a
-  }
-  return FALLBACK_RESPONSES[Math.floor(Math.random() * FALLBACK_RESPONSES.length)]
-}
 
 export default function App() {
   const [session, setSession] = useState(undefined)
@@ -136,12 +65,8 @@ export default function App() {
       .eq('is_published', true)
       .order('id')
       .then(({ data, error: err }) => {
-        if (err) {
-          console.error('Failed to load cases:', err)
-          setError(err.message)
-        } else {
-          setCases(data.map(mapCase))
-        }
+        if (err) { console.error('Failed to load cases:', err); setError(err.message) }
+        else { setCases(data.map(mapCase)) }
         setLoading(false)
       })
   }, [session])
@@ -149,141 +74,105 @@ export default function App() {
   const [selectedCase, setSelectedCase] = useState(null)
   const [currentStep, setCurrentStep] = useState(0)
 
-  const [conversation, setConversation] = useState([])
-  const [questionInput, setQuestionInput] = useState("")
-  const [isAsking, setIsAsking] = useState(false)
-  const [questionsUsed, setQuestionsUsed] = useState(0)
-  const [anamnesisComplete, setAnamnesisComplete] = useState(false)
-  const chatEndRef = useRef(null)
+  // Anamnesis
+  const [selectedQuestions, setSelectedQuestions] = useState([])
 
-  const [examined, setExamined] = useState([])
-  const [orderedTests, setOrderedTests] = useState([])
-  const [testInput, setTestInput] = useState("")
-  const [testFeedback, setTestFeedback] = useState(null)
+  // Examination
+  const [selectedExams, setSelectedExams] = useState([])
+
+  // Investigations
+  const [selectedTests, setSelectedTests] = useState([])
+
+  // Diagnosis
+  const [differentialPicks, setDifferentialPicks] = useState([])
+  const [diagnosisStage, setDiagnosisStage] = useState("differential")
   const [diagnosis, setDiagnosis] = useState("")
+  const [isDiagnosing, setIsDiagnosing] = useState(false)
+  const [diagnosisResult, setDiagnosisResult] = useState(null)
+
+  // Treatment
+  const [selectedTreatments, setSelectedTreatments] = useState([])
   const [treatment, setTreatment] = useState("")
+
   const [score, setScore] = useState(0)
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [conversation, isAsking])
+  function toggleQuestion(idx) {
+    if (selectedQuestions.includes(idx)) return
+    if (selectedQuestions.length >= MAX_ANAMNESIS_PICKS) return
+    setSelectedQuestions(prev => [...prev, idx])
+    setScore(s => s + (selectedCase.historyQuestions[idx].points ?? 0))
+  }
 
-  async function handleAskQuestion() {
-  if (!questionInput.trim() || isAsking || questionsUsed >= MAX_QUESTIONS) return
+  function toggleExam(idx) {
+    if (selectedExams.includes(idx)) return
+    setSelectedExams(prev => [...prev, idx])
+    if (selectedCase.examinations[idx].relevant) setScore(s => s + 8)
+  }
 
-  const question = questionInput.trim()
-  setQuestionInput("")
-  setIsAsking(true)
+  function toggleTest(idx) {
+    if (selectedTests.includes(idx)) return
+    if (selectedTests.length >= MAX_INVESTIGATION_PICKS) return
+    setSelectedTests(prev => [...prev, idx])
+    const inv = selectedCase.investigations[idx]
+    const pts = inv.tag === "essential" ? 10 : inv.tag === "relevant" ? 5 : -5
+    setScore(s => s + pts)
+  }
 
-  // Show clean question in UI, send enhanced prompt to API
-  const displayMessage = { role: "user", content: question }
-  const apiMessage = { role: "user", content: `[Xəstə kimi cavab ver, Azərbaycan dilində, qısa və təbii. Tibbi termin işlətmə.] ${question}` }
+  function toggleDifferential(idx) {
+    if (differentialPicks.includes(idx)) {
+      setDifferentialPicks(prev => prev.filter(i => i !== idx))
+      return
+    }
+    if (differentialPicks.length >= MAX_DIFFERENTIAL_PICKS) return
+    setDifferentialPicks(prev => [...prev, idx])
+  }
 
-  // For display
-  setConversation(prev => [...prev, displayMessage])
-  setQuestionsUsed(q => q + 1)
+  async function checkDiagnosis() {
+    if (!diagnosis.trim() || isDiagnosing) return
+    setIsDiagnosing(true)
+    try {
+      const res = await fetch("/api/diagnose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentDiagnosis: diagnosis,
+          correctDiagnosis: selectedCase.correctDiagnosis,
+          diagnosisKeywords: selectedCase.diagnosisKeywords,
+        }),
+      })
+      const data = await res.json()
+      const correct = data.correct === true
+      setDiagnosisResult(correct)
+      if (correct) setScore(s => s + 20)
+    } catch {
+      setDiagnosisResult(false)
+    }
+    setIsDiagnosing(false)
+  }
 
-  // For API: use clean history + enhanced current question
-  const cleanHistory = conversation.filter(m =>
-  m.role === "assistant" ? !m.content.includes("Bağışlayın") : true
-)
-  const apiConversation = [...cleanHistory, apiMessage]
-
-  console.log("Sending to Gemini:", JSON.stringify(apiConversation))  // ADD THIS LINE
-
-  try {
-    const answer = askPatient(question, selectedCase.historyQuestions)
-    const matched = selectedCase.historyQuestions.some(hq =>
-      question.toLowerCase().includes(hq.q.toLowerCase().slice(0, 8)) ||
-      hq.q.toLowerCase().includes(question.toLowerCase().slice(0, 8))
+  function toggleTreatment(idx) {
+    setSelectedTreatments(prev =>
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
     )
-    if (matched) setScore(s => s + 5)
-    setConversation(prev => [...prev, { role: "assistant", content: answer }])
-  } catch {
-  // don't pollute conversation history with error messages
-}
-
-  setIsAsking(false)
-
-  if (questionsUsed + 1 >= MAX_QUESTIONS) {
-    setAnamnesisComplete(true)
-  }
-}
-
-  function toggle(list, setList, index, points = 0) {
-    if (!list.includes(index)) {
-      setList([...list, index])
-      setScore(s => s + points)
-    }
-  }
-
-  function submitTest() {
-    if (!testInput.trim()) return
-    const c = selectedCase
-    const inputNorm = norm(testInput)
-    const aliasEntry = ALIASES.find(([key]) => inputNorm.includes(key) || key.includes(inputNorm))
-    const fragment = aliasEntry ? aliasEntry[1] : inputNorm
-    const match = c.investigations.findIndex(inv => norm(inv.test).includes(fragment))
-
-    if (match !== -1 && !orderedTests.includes(match)) {
-      const inv = c.investigations[match]
-      setOrderedTests(prev => [...prev, match])
-      setTestFeedback({ type: inv.relevant ? "good" : "warning", test: inv.test, result: inv.result, message: inv.relevant ? "Düzgün seçim" : "Bu test lazımsızdır — xərci artırır", points: inv.relevant ? 10 : -5 })
-      setScore(s => s + (inv.relevant ? 10 : -5))
-    } else if (match !== -1 && orderedTests.includes(match)) {
-      setTestFeedback({ type: "info", test: testInput, result: "", message: "Bu test artıq sifariş edilib", points: 0 })
-    } else {
-      setTestFeedback({ type: "error", test: testInput, result: "", message: "Tapılmadı. Fərqli yazın (məs: ALT, HBsAg, Widal...)", points: 0 })
-    }
-    setTestInput("")
-  }
-
-  function submitTestDirect(value) {
-    const c = selectedCase
-    const clean = (s) => s.toLowerCase()
-      .replace(/ı/g, "i").replace(/ə/g, "e").replace(/ö/g, "o")
-      .replace(/ü/g, "u").replace(/ğ/g, "g").replace(/ş/g, "s")
-      .replace(/ç/g, "c").replace(/İ/g, "i").replace(/[^a-z0-9]/g, "")
-    const input = clean(value)
-    const match = c.investigations.findIndex(inv => {
-      const t = clean(inv.test)
-      return t.includes(input) || input.includes(t)
-    })
-    if (match !== -1 && !orderedTests.includes(match)) {
-      const inv = c.investigations[match]
-      setOrderedTests(prev => [...prev, match])
-      setTestFeedback({ type: inv.relevant ? "good" : "warning", test: inv.test, result: inv.result, message: inv.relevant ? "Düzgün seçim" : "Bu test lazımsızdır — xərci artırır", points: inv.relevant ? 10 : -5 })
-      setScore(s => s + (inv.relevant ? 10 : -5))
-    } else if (match !== -1) {
-      setTestFeedback({ type: "info", test: value, result: "", message: "Bu test artıq sifariş edilib", points: 0 })
-    } else {
-      setTestFeedback({ type: "error", test: value, result: "", message: "Tapılmadı", points: 0 })
-    }
-  }
-
-  function checkDiagnosis() {
-    const input = diagnosis.toLowerCase()
-    const correct = selectedCase.diagnosisKeywords.some(k => input.includes(k))
-    setScore(s => s + (correct ? 20 : 0))
-    setCurrentStep(4)
   }
 
   function resetAll() {
     setSelectedCase(null)
     setCurrentStep(0)
-    setConversation([])
-    setQuestionInput("")
-    setIsAsking(false)
-    setQuestionsUsed(0)
-    setAnamnesisComplete(false)
-    setExamined([])
-    setOrderedTests([])
-    setTestInput("")
-    setTestFeedback(null)
+    setSelectedQuestions([])
+    setSelectedExams([])
+    setSelectedTests([])
+    setDifferentialPicks([])
+    setDiagnosisStage("differential")
     setDiagnosis("")
+    setDiagnosisResult(null)
+    setIsDiagnosing(false)
+    setSelectedTreatments([])
     setTreatment("")
     setScore(0)
   }
+
+  // ── Auth / loading gates ────────────────────────────────────────────────
 
   if (session === undefined) return (
     <div className="min-h-screen bg-stone-100 flex items-center justify-center">
@@ -304,6 +193,8 @@ export default function App() {
       <p className="text-red-500 text-sm">Xəta: {error}</p>
     </div>
   )
+
+  // ── Case list ───────────────────────────────────────────────────────────
 
   if (!selectedCase) {
     return (
@@ -345,12 +236,14 @@ export default function App() {
   }
 
   const c = selectedCase
-  const questionsLeft = MAX_QUESTIONS - questionsUsed
+
+  // ── Case flow ───────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-stone-100 p-4">
       <div className="max-w-xl mx-auto">
 
+        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <span className="text-xl font-medium text-indigo-700">ClinIQ</span>
           <div className="flex items-center gap-3">
@@ -363,6 +256,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* Step progress */}
         <div className="flex rounded-lg overflow-hidden border border-stone-200 mb-4">
           {STEPS.map((step, i) => (
             <div key={step} className={`flex-1 py-2 text-center text-xs font-medium border-r border-stone-200 last:border-r-0
@@ -373,6 +267,7 @@ export default function App() {
           ))}
         </div>
 
+        {/* Patient summary */}
         <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
           <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">Xəstənin təqdimatı</p>
           <p className="text-sm text-stone-800 leading-relaxed mb-3">{c.patientSummary}</p>
@@ -395,101 +290,70 @@ export default function App() {
           </div>
         </div>
 
+        {/* ── Step 0: Anamnesis ─────────────────────────────────────────── */}
         {currentStep === 0 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
             <div className="flex justify-between items-center mb-3">
               <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">Xəstəyə sual verin</p>
               <span className={`text-xs font-medium px-2 py-1 rounded-full
-                ${questionsLeft > 2 ? "bg-emerald-100 text-emerald-700" :
-                  questionsLeft > 0 ? "bg-amber-100 text-amber-700" :
-                  "bg-red-100 text-red-700"}`}>
-                {questionsLeft > 0 ? `${questionsLeft} sual qaldı` : "Suallar bitdi"}
+                ${selectedQuestions.length >= MAX_ANAMNESIS_PICKS ? "bg-red-100 text-red-700" :
+                  selectedQuestions.length >= 3 ? "bg-amber-100 text-amber-700" :
+                  "bg-emerald-100 text-emerald-700"}`}>
+                {selectedQuestions.length}/{MAX_ANAMNESIS_PICKS} seçilib
               </span>
             </div>
-
-            <div className="bg-stone-50 rounded-xl p-3 mb-3 min-h-32 max-h-72 overflow-y-auto flex flex-col gap-3">
-              {conversation.length === 0 && (
-                <p className="text-xs text-stone-400 text-center mt-4">
-                  Xəstəyə istədiyiniz sualı yazın. Məsələn: "Şikayətləriniz nə vaxtdan başlayıb?"
-                </p>
-              )}
-              {conversation.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-xs px-3 py-2 rounded-xl text-sm leading-relaxed
-                    ${msg.role === "user"
-                      ? "bg-indigo-600 text-white rounded-br-sm"
-                      : "bg-white border border-stone-200 text-stone-800 rounded-bl-sm"}`}>
-                    {msg.role === "assistant" && (
-                      <p className="text-xs font-medium text-stone-400 mb-1">Xəstə</p>
+            <p className="text-xs text-stone-400 mb-3">Ən vacib hesab etdiyiniz 5 sualı seçin. Cavab dərhal görünəcək.</p>
+            <div className="flex flex-col gap-2">
+              {(c.historyQuestions ?? []).map((q, idx) => {
+                const selected = selectedQuestions.includes(idx)
+                const capped = !selected && selectedQuestions.length >= MAX_ANAMNESIS_PICKS
+                return (
+                  <div key={q.id ?? idx}>
+                    <button
+                      onClick={() => toggleQuestion(idx)}
+                      disabled={capped}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
+                        ${selected ? "bg-indigo-50 border-indigo-200 text-indigo-900" :
+                          capped ? "bg-stone-50 border-stone-200 text-stone-400 opacity-50 cursor-not-allowed" :
+                          "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="flex-1">{q.q}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TAG_COLOR[q.tag] ?? TAG_COLOR.irrelevant}`}>
+                            {TAG_LABEL[q.tag] ?? q.tag}
+                          </span>
+                          <span className="text-xs text-stone-400">+{q.points ?? 0}</span>
+                        </div>
+                      </div>
+                    </button>
+                    {selected && (
+                      <div className="mt-1 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 fade-up">
+                        <p className="text-xs font-medium text-emerald-600 mb-0.5">Xəstə</p>
+                        {q.a}
+                      </div>
                     )}
-                    {msg.content}
                   </div>
-                </div>
-              ))}
-              {isAsking && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-stone-200 rounded-xl rounded-bl-sm px-3 py-2">
-                    <p className="text-xs font-medium text-stone-400 mb-1">Xəstə</p>
-                    <div className="flex gap-1 items-center h-4">
-                      <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay:"0ms"}}/>
-                      <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay:"150ms"}}/>
-                      <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style={{animationDelay:"300ms"}}/>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={chatEndRef} />
+                )
+              })}
             </div>
-
-            {!anamnesisComplete && (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={questionInput}
-                  onChange={(e) => setQuestionInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAskQuestion()}
-                  placeholder="Sualınızı yazın..."
-                  disabled={isAsking || questionsLeft === 0}
-                  className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400 disabled:bg-stone-50 disabled:text-stone-400"
-                />
-                <button
-                  onClick={handleAskQuestion}
-                  disabled={isAsking || !questionInput.trim() || questionsLeft === 0}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:bg-stone-300 transition-colors">
-                  Soruş
-                </button>
-              </div>
-            )}
-
-            {anamnesisComplete && (
-              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <p className="text-xs font-medium text-amber-700 mb-2">📋 Anamnez tamamlandı — topladığınız məlumat:</p>
-                <div className="flex flex-col gap-1">
-                  {conversation
-                    .filter(m => m.role === "user")
-                    .map((m, i) => (
-                      <p key={i} className="text-xs text-stone-600">• {m.content}</p>
-                    ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
+        {/* ── Step 1: Examination ───────────────────────────────────────── */}
         {currentStep === 1 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Hansı sistemi müayinə etmək istərsiniz?</p>
             <div className="flex flex-col gap-2">
               {c.examinations.map((item, i) => (
                 <div key={i}>
-                  <button onClick={() => toggle(examined, setExamined, i, 8)}
+                  <button onClick={() => toggleExam(i)}
                     className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
-                      ${examined.includes(i) ? "bg-indigo-50 border-indigo-200 text-indigo-800"
+                      ${selectedExams.includes(i) ? "bg-indigo-50 border-indigo-200 text-indigo-800"
                         : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
                     {item.system}
                   </button>
-                  {examined.includes(i) && (
-                    <p className="text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 mt-1 border border-emerald-200">
+                  {selectedExams.includes(i) && (
+                    <p className="text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 mt-1 border border-emerald-200 fade-up">
                       {item.finding}
                     </p>
                   )}
@@ -499,134 +363,427 @@ export default function App() {
           </div>
         )}
 
+        {/* ── Step 2: Investigations ────────────────────────────────────── */}
         {currentStep === 2 && (
           <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
-            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-1">Analiz sifariş edin</p>
-            <p className="text-xs text-stone-400 mb-3">Analiz adını yazın və göndərin. Lazımsız testlər xal azaldır.</p>
-            <div className="flex flex-wrap gap-1 mb-3">
-              {["Tam qan", "ALT", "HBsAg", "Anti-HIV", "CD4", "Widal", "Qan mədəniyyəti", "Rentgen", "Bilirubin", "Leishmania", "Botulinum", "EMG"].map(hint => (
-                <button key={hint} onClick={() => submitTestDirect(hint)}
-                  className="text-xs bg-stone-100 hover:bg-indigo-50 hover:text-indigo-700 text-stone-500 px-2 py-1 rounded border border-stone-200 transition-colors">
-                  {hint}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={testInput}
-                onChange={(e) => setTestInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && submitTest()}
-                placeholder="məs: ALT, HBsAg, Widal..."
-                className="flex-1 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-              />
-              <button onClick={submitTest}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
-                Sifariş et
-              </button>
-            </div>
-            {testFeedback && (
-              <div className={`rounded-lg px-3 py-2 mb-3 border text-sm
-                ${testFeedback.type === "good" ? "bg-emerald-50 border-emerald-200 text-emerald-800" :
-                  testFeedback.type === "warning" ? "bg-amber-50 border-amber-200 text-amber-800" :
-                  testFeedback.type === "error" ? "bg-red-50 border-red-200 text-red-800" :
-                  "bg-stone-50 border-stone-200 text-stone-700"}`}>
-                <p className="font-medium">{testFeedback.message} {testFeedback.points !== 0 && `(${testFeedback.points > 0 ? "+" : ""}${testFeedback.points} xal)`}</p>
-                {testFeedback.result && <p className="mt-1">{testFeedback.result}</p>}
+            {/* Patient figure + findings feed */}
+            <div className="flex gap-3 mb-4 min-h-28">
+              {/* Patient SVG */}
+              <div className="shrink-0 flex items-center justify-center w-20">
+                <svg viewBox="0 0 60 120" width="60" height="120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Head */}
+                  <circle cx="30" cy="14" r="11" fill="#d6d3d1" />
+                  {/* Neck */}
+                  <rect x="26" y="24" width="8" height="6" rx="2" fill="#d6d3d1" />
+                  {/* Body */}
+                  <rect x="16" y="30" width="28" height="36" rx="6" fill="#e7e5e4" />
+                  {/* Left arm */}
+                  <rect x="6" y="32" width="10" height="26" rx="5" fill="#d6d3d1" />
+                  {/* Right arm */}
+                  <rect x="44" y="32" width="10" height="26" rx="5" fill="#d6d3d1" />
+                  {/* Left leg */}
+                  <rect x="18" y="66" width="10" height="34" rx="5" fill="#d6d3d1" />
+                  {/* Right leg */}
+                  <rect x="32" y="66" width="10" height="34" rx="5" fill="#d6d3d1" />
+                  {/* Heartbeat line */}
+                  <polyline points="18,50 22,50 24,44 27,56 30,44 33,56 36,50 42,50"
+                    stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
+              {/* Findings feed */}
+              <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto max-h-40">
+                {selectedTests.length === 0 ? (
+                  <p className="text-xs text-stone-300 mt-2">Nəticələr burada görünəcək...</p>
+                ) : (
+                  selectedTests.map((idx) => {
+                    const inv = c.investigations[idx]
+                    const borderColor = inv.tag === "essential" ? "border-emerald-400" :
+                      inv.tag === "relevant" ? "border-amber-400" : "border-red-400"
+                    return (
+                      <div key={idx} className={`bg-white border rounded-lg p-2 shadow-sm border-l-4 ${borderColor} fade-in`}>
+                        <p className="text-xs font-medium text-stone-700">{inv.test}</p>
+                        <p className="text-xs text-stone-500 mt-0.5 leading-snug">{inv.result}</p>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Test selection */}
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">Analiz sifariş edin</p>
+              <span className={`text-xs font-medium px-2 py-1 rounded-full
+                ${selectedTests.length >= MAX_INVESTIGATION_PICKS ? "bg-red-100 text-red-700" :
+                  selectedTests.length >= 3 ? "bg-amber-100 text-amber-700" :
+                  "bg-emerald-100 text-emerald-700"}`}>
+                {selectedTests.length}/{MAX_INVESTIGATION_PICKS} seçilib
+              </span>
+            </div>
+            <p className="text-xs text-stone-400 mb-3">Lazımsız testlər xal azaldır.</p>
+            <div className="flex flex-col gap-2">
+              {(c.investigations ?? []).map((inv, idx) => {
+                const selected = selectedTests.includes(idx)
+                const capped = !selected && selectedTests.length >= MAX_INVESTIGATION_PICKS
+                return (
+                  <button
+                    key={inv.id ?? idx}
+                    onClick={() => toggleTest(idx)}
+                    disabled={capped}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
+                      ${selected ? "bg-indigo-50 border-indigo-200 text-indigo-900" :
+                        capped ? "bg-stone-50 border-stone-200 text-stone-400 opacity-50 cursor-not-allowed" :
+                        "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="flex-1 font-medium">{inv.test}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {inv.cost && (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${COST_COLOR[inv.cost]}`}>
+                            {COST_DISPLAY[inv.cost]}
+                          </span>
+                        )}
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${TAG_COLOR[inv.tag] ?? TAG_COLOR.irrelevant}`}>
+                          {TAG_LABEL[inv.tag] ?? inv.tag}
+                        </span>
+                        {selected && <span className="text-emerald-500 text-sm">✓</span>}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Diagnosis ─────────────────────────────────────────── */}
+        {currentStep === 3 && (
+          <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
+            {/* Stage 1: Differential */}
+            {diagnosisStage === "differential" && (c.differentialDiagnosis?.length > 0) && (
+              <>
+                <div className="flex justify-between items-center mb-1">
+                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">Differensial diaqnoz</p>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full
+                    ${differentialPicks.length >= MAX_DIFFERENTIAL_PICKS ? "bg-indigo-100 text-indigo-700" : "bg-stone-100 text-stone-500"}`}>
+                    {differentialPicks.length}/{MAX_DIFFERENTIAL_PICKS} seçilib
+                  </span>
+                </div>
+                <p className="text-xs text-stone-400 mb-3">Ən ehtimallı diaqnozu seçin (maks. 3)</p>
+                <div className="flex flex-col gap-2 mb-4">
+                  {c.differentialDiagnosis.map((item, idx) => {
+                    const picked = differentialPicks.includes(idx)
+                    const capped = !picked && differentialPicks.length >= MAX_DIFFERENTIAL_PICKS
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => toggleDifferential(idx)}
+                        disabled={capped}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
+                          ${picked ? "bg-indigo-50 border-indigo-200 text-indigo-900" :
+                            capped ? "bg-stone-50 border-stone-200 text-stone-400 opacity-50 cursor-not-allowed" :
+                            "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
+                        <div className="flex justify-between items-center">
+                          <span>{item.diagnosis}</span>
+                          {picked && <span className="text-indigo-500 text-sm">✓</span>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <button
+                  onClick={() => setDiagnosisStage("final")}
+                  disabled={differentialPicks.length === 0}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-2 rounded-xl text-sm transition-colors">
+                  Diaqnozu müəyyənləşdir →
+                </button>
+              </>
             )}
-            {orderedTests.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">Sifariş edilmiş testlər</p>
+
+            {/* Stage 2: Final diagnosis */}
+            {(diagnosisStage === "final" || !c.differentialDiagnosis?.length) && (
+              <>
+                {/* Show differential commitment if made */}
+                {differentialPicks.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs text-stone-400 mb-1.5">Seçdiyiniz variantlar:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {differentialPicks.map(idx => (
+                        <span key={idx} className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
+                          {c.differentialDiagnosis[idx].diagnosis}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="border-t border-stone-100 mt-3 mb-3" />
+                  </div>
+                )}
+
+                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Əsas diaqnoz</p>
+                <input
+                  type="text"
+                  value={diagnosis}
+                  onChange={(e) => setDiagnosis(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && checkDiagnosis()}
+                  placeholder="Diaqnozunuzu yazın..."
+                  disabled={diagnosisResult !== null}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-800 mb-3 outline-none focus:border-indigo-400 disabled:bg-stone-50 disabled:text-stone-400"
+                />
+
+                {diagnosisResult === null && (
+                  <button
+                    onClick={checkDiagnosis}
+                    disabled={!diagnosis.trim() || isDiagnosing}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-2 rounded-xl text-sm transition-colors">
+                    {isDiagnosing ? "Yoxlanılır..." : "Diaqnozu yoxla"}
+                  </button>
+                )}
+
+                {diagnosisResult === true && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 fade-up">
+                    <p className="text-sm font-medium text-emerald-700">Düzgün! +20 xal</p>
+                    <p className="text-xs text-emerald-600 mt-0.5">Diaqnoz: {c.correctDiagnosis}</p>
+                  </div>
+                )}
+                {diagnosisResult === false && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 fade-up">
+                    <p className="text-sm font-medium text-red-700">Yanlış</p>
+                    <p className="text-xs text-red-600 mt-0.5">Düzgün diaqnoz: {c.correctDiagnosis}</p>
+                  </div>
+                )}
+
+                {diagnosisResult !== null && (
+                  <button
+                    onClick={() => setCurrentStep(4)}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl text-sm transition-colors mt-3">
+                    Növbəti mərhələ →
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Step 4: Treatment ─────────────────────────────────────────── */}
+        {currentStep === 4 && (
+          <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
+            {c.treatmentOptions?.length > 0 ? (
+              <>
+                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-1">Müalicə planı</p>
+                <p className="text-xs text-stone-400 mb-3">Düzgün hesab etdiyiniz müalicə tədbirlərini seçin</p>
+                <div className="flex flex-col gap-2">
+                  {c.treatmentOptions.map((opt, idx) => {
+                    const selected = selectedTreatments.includes(idx)
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => toggleTreatment(idx)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
+                          ${selected ? "bg-indigo-50 border-indigo-200 text-indigo-900"
+                            : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="flex-1">{opt.text}</span>
+                          {selected && <span className="text-indigo-500 shrink-0">✓</span>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Müalicə planınızı daxil edin</p>
+                <textarea
+                  value={treatment}
+                  onChange={(e) => setTreatment(e.target.value)}
+                  placeholder="Müalicə, dərmanlar, göndərişlər..."
+                  rows={5}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-800 outline-none focus:border-indigo-400 resize-none"
+                />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Step 5: Results ───────────────────────────────────────────── */}
+        {currentStep === 5 && (() => {
+          // Tally treatment score here to avoid setScore in render
+          const treatmentScore = (c.treatmentOptions?.length > 0)
+            ? selectedTreatments.reduce((acc, idx) => acc + (c.treatmentOptions[idx].correct ? 5 : -3), 0)
+            : 0
+          const totalScore = score + treatmentScore
+
+          return (
+            <div className="mb-3">
+              {/* Score header */}
+              <div className={`rounded-xl p-4 mb-3 border ${
+                diagnosisResult ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+                <p className="text-xs font-medium uppercase tracking-wide mb-1 text-stone-500">Yekun xal</p>
+                <p className="text-3xl font-medium text-stone-800 mb-1">{totalScore} xal</p>
+                <p className="text-sm text-stone-600">Düzgün diaqnoz: <span className="font-medium text-indigo-700">{c.correctDiagnosis}</span></p>
+                <p className="text-sm text-stone-600 mt-1">Sizin cavab: <span className="font-medium">{diagnosis || "Daxil edilməyib"}</span></p>
+              </div>
+
+              {/* Anamnesis breakdown */}
+              {selectedQuestions.length > 0 && (
+                <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
+                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Anamnez nəticəsi</p>
+                  <div className="flex flex-col gap-2">
+                    {selectedQuestions.map(idx => {
+                      const q = c.historyQuestions[idx]
+                      return (
+                        <div key={idx} className="border border-stone-100 rounded-lg p-2">
+                          <div className="flex justify-between items-start gap-2 mb-1">
+                            <span className="text-xs text-stone-700 flex-1">{q.q}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${TAG_COLOR[q.tag]}`}>
+                                {TAG_LABEL[q.tag]}
+                              </span>
+                              <span className="text-xs text-stone-400">+{q.points ?? 0}</span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-stone-500 bg-stone-50 rounded px-2 py-1">{q.a}</p>
+                          {q.explanation && (
+                            <p className="text-xs text-stone-400 italic mt-1">{q.explanation}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Missed essentials */}
+                  {(() => {
+                    const missed = (c.historyQuestions ?? [])
+                      .map((q, idx) => ({ q, idx }))
+                      .filter(({ q, idx }) => q.tag === "essential" && !selectedQuestions.includes(idx))
+                    return missed.length > 0 ? (
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-red-600 mb-1.5">Qaçırılmış vacib suallar</p>
+                        <div className="flex flex-col gap-1">
+                          {missed.map(({ q, idx }) => (
+                            <div key={idx} className="bg-red-50 border border-red-100 rounded-lg px-2 py-1.5">
+                              <p className="text-xs text-red-700">{q.q}</p>
+                              {q.explanation && <p className="text-xs text-red-500 italic mt-0.5">{q.explanation}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-emerald-600 mt-2">Bütün vacib suallar əhatə olunub ✓</p>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {/* Examinations breakdown */}
+              {selectedExams.length > 0 && (
+                <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
+                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Müayinə nəticəsi</p>
+                  <div className="flex flex-col gap-1">
+                    {selectedExams.map(idx => {
+                      const ex = c.examinations[idx]
+                      return (
+                        <div key={idx} className="flex justify-between items-start gap-2 text-xs px-2 py-1.5 bg-stone-50 rounded-lg">
+                          <span className="text-stone-700 flex-1">{ex.finding}</span>
+                          <span className={`font-medium shrink-0 ${ex.relevant ? "text-emerald-600" : "text-stone-400"}`}>
+                            {ex.relevant ? "+8 xal" : "0 xal"}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Investigations breakdown */}
+              {selectedTests.length > 0 && (
+                <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
+                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Analizlər nəticəsi</p>
+                  <div className="flex flex-col gap-2">
+                    {selectedTests.map(idx => {
+                      const inv = c.investigations[idx]
+                      const pts = inv.tag === "essential" ? 10 : inv.tag === "relevant" ? 5 : -5
+                      return (
+                        <div key={idx} className="border border-stone-100 rounded-lg p-2">
+                          <div className="flex justify-between items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-stone-700 flex-1">{inv.test}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${TAG_COLOR[inv.tag]}`}>
+                                {TAG_LABEL[inv.tag]}
+                              </span>
+                              <span className={`text-xs font-medium ${pts > 0 ? "text-emerald-600" : pts < 0 ? "text-red-600" : "text-stone-400"}`}>
+                                {pts > 0 ? `+${pts}` : pts}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-stone-500 bg-stone-50 rounded px-2 py-1">{inv.result}</p>
+                          {inv.explanation && (
+                            <p className="text-xs text-stone-400 italic mt-1">{inv.explanation}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Diagnosis explanation */}
+              <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
+                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Diaqnostik əsaslar</p>
                 <div className="flex flex-col gap-1">
-                  {orderedTests.map((idx) => (
-                    <div key={idx} className={`text-xs px-2 py-1 rounded flex justify-between
-                      ${c.investigations[idx].relevant ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                      <span>{c.investigations[idx].test}</span>
-                      <span>{c.investigations[idx].relevant ? "✓" : "⚠ lazımsız"}</span>
+                  {c.explanationPoints.map((point, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm text-stone-600">
+                      <span className="text-emerald-500 mt-0.5">✓</span>
+                      <span>{point}</span>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
-        )}
 
-        {currentStep === 3 && (
-          <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
-            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Diaqnozunuzu daxil edin</p>
-            <input
-              type="text"
-              value={diagnosis}
-              onChange={(e) => setDiagnosis(e.target.value)}
-              placeholder="Əsas diaqnoz..."
-              className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-800 mb-4 outline-none focus:border-indigo-400"
-            />
-            <button
-              onClick={checkDiagnosis}
-              disabled={!diagnosis.trim()}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-2 rounded-xl text-sm transition-colors">
-              Diaqnozu təsdiqlə
-            </button>
-          </div>
-        )}
-
-        {currentStep === 4 && (
-          <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
-            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Müalicə planınızı daxil edin</p>
-            <textarea
-              value={treatment}
-              onChange={(e) => setTreatment(e.target.value)}
-              placeholder="Müalicə, dərmanlar, göndərişlər..."
-              rows={5}
-              className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-800 outline-none focus:border-indigo-400 resize-none"
-            />
-          </div>
-        )}
-
-        {currentStep === 5 && (
-          <div className="mb-3">
-            <div className={`rounded-xl p-4 mb-3 border ${
-              selectedCase.diagnosisKeywords.some(k => diagnosis.toLowerCase().includes(k))
-                ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
-              <p className="text-xs font-medium uppercase tracking-wide mb-1 text-stone-500">Yekun xal</p>
-              <p className="text-3xl font-medium text-stone-800 mb-1">{score} xal</p>
-              <p className="text-sm text-stone-600">Düzgün diaqnoz: <span className="font-medium text-indigo-700">{c.correctDiagnosis}</span></p>
-              <p className="text-sm text-stone-600 mt-1">Sizin cavab: <span className="font-medium">{diagnosis || "Daxil edilməyib"}</span></p>
-            </div>
-            <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
-              <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Diaqnostik əsaslar</p>
-              <div className="flex flex-col gap-1">
-                {c.explanationPoints.map((point, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm text-stone-600">
-                    <span className="text-emerald-500 mt-0.5">✓</span>
-                    <span>{point}</span>
+              {/* Treatment breakdown */}
+              <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
+                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Müalicə nəticəsi</p>
+                {c.treatmentOptions?.length > 0 && selectedTreatments.length > 0 && (
+                  <div className="flex flex-col gap-1 mb-4">
+                    {c.treatmentOptions.map((opt, idx) => {
+                      const sel = selectedTreatments.includes(idx)
+                      if (!sel && !opt.correct) return null
+                      const icon = opt.correct && sel ? "✓" : opt.correct && !sel ? "○" : "✗"
+                      const color = opt.correct && sel ? "text-emerald-600 bg-emerald-50 border-emerald-100"
+                        : opt.correct && !sel ? "text-stone-500 bg-stone-50 border-stone-100"
+                        : "text-red-600 bg-red-50 border-red-100"
+                      const pts = sel ? (opt.correct ? "+5" : "-3") : null
+                      return (
+                        <div key={idx} className={`flex justify-between items-start gap-2 text-xs px-2 py-1.5 rounded-lg border ${color}`}>
+                          <span className="flex-1">{icon} {opt.text}</span>
+                          {pts && <span className="font-medium shrink-0">{pts}</span>}
+                        </div>
+                      )
+                    })}
                   </div>
-                ))}
+                )}
+                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">Müalicə protokolu</p>
+                <div className="flex flex-col gap-1">
+                  {c.treatmentPoints.map((point, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm text-stone-600">
+                      <span className="text-indigo-400 mt-0.5">→</span>
+                      <span>{point}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3">
-              <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Müalicə protokolu</p>
-              <div className="flex flex-col gap-1">
-                {c.treatmentPoints.map((point, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm text-stone-600">
-                    <span className="text-indigo-400 mt-0.5">→</span>
-                    <span>{point}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button onClick={resetAll}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
-              Başqa xəstə seç →
-            </button>
-          </div>
-        )}
 
+              <button onClick={resetAll}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+                Başqa xəstə seç →
+              </button>
+            </div>
+          )
+        })()}
+
+        {/* Shared next-step button (steps 0, 1, 2, 4) */}
         {currentStep < 5 && currentStep !== 3 && (
           <button
             onClick={() => setCurrentStep(s => s + 1)}
-            disabled={currentStep === 0 && !anamnesisComplete && questionsUsed === 0}
+            disabled={currentStep === 0 && selectedQuestions.length === 0}
             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
             Növbəti mərhələ →
           </button>
