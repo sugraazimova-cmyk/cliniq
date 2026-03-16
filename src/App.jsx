@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { supabase } from './supabase.js'
 import AuthScreen from './AuthScreen.jsx'
 import ProfileDrawer from './ProfileDrawer.jsx'
+import FeaturesPage from './FeaturesPage.jsx'
 
 function mapCase(row) {
   return {
@@ -127,6 +128,8 @@ export default function App() {
 
   const [score, setScore] = useState(0)
 
+  const [page, setPage] = useState("features")
+
   const [showProfile, setShowProfile] = useState(false)
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set())
 
@@ -216,6 +219,7 @@ export default function App() {
   function resetAll() {
     setSelectedCase(null)
     setCurrentStep(0)
+    setPage("features")
     setSelectedQuestions([])
     setSelectedExams([])
     setSelectedTests([])
@@ -251,6 +255,29 @@ export default function App() {
     </div>
   )
 
+  // ── Features page ───────────────────────────────────────────────────────
+
+  if (!selectedCase && page === "features") {
+    return (
+      <>
+        <FeaturesPage
+          session={session}
+          onEnterCases={() => setPage("cases")}
+          setShowProfile={setShowProfile}
+        />
+        <ProfileDrawer
+          open={showProfile}
+          onClose={() => setShowProfile(false)}
+          session={session}
+          cases={cases}
+          bookmarkedIds={bookmarkedIds}
+          setBookmarkedIds={setBookmarkedIds}
+          onSelectCase={(id) => { setSelectedCase(cases.find(x => x.id === id) ?? null); setPage("cases"); setShowProfile(false) }}
+        />
+      </>
+    )
+  }
+
   // ── Case list ───────────────────────────────────────────────────────────
 
   if (!selectedCase) {
@@ -258,7 +285,14 @@ export default function App() {
       <div className="min-h-screen bg-stone-100 p-4">
         <div className="max-w-xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-            <span className="text-2xl font-medium text-indigo-700">ClinIQ</span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setPage("features")}
+                className="text-sm text-stone-400 hover:text-stone-700 transition-colors">
+                ←
+              </button>
+              <span className="text-2xl font-medium text-indigo-700">ClinIQ</span>
+            </div>
             <button
               onClick={() => setShowProfile(true)}
               className="text-sm font-medium text-stone-600 hover:text-indigo-600 transition-colors">
