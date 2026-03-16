@@ -1,66 +1,131 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
+import { motion } from "framer-motion"
+import { Eye, EyeOff, Stethoscope } from "lucide-react"
 import { supabase } from './supabase.js'
 
+function ECGCanvas() {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    let animFrameId
+    let offset = 0
+
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect
+      canvas.width = width
+      canvas.height = height
+    })
+    ro.observe(canvas.parentElement)
+
+    function lerp(a, b, t) { return a + (b - a) * t }
+
+    function ecgValue(t) {
+      t = ((t % 1) + 1) % 1
+      if (t < 0.08) return 0
+      if (t < 0.13) return lerp(0, 0.18, (t - 0.08) / 0.05)
+      if (t < 0.18) return lerp(0.18, 0, (t - 0.13) / 0.05)
+      if (t < 0.28) return 0
+      if (t < 0.30) return lerp(0, -0.25, (t - 0.28) / 0.02)
+      if (t < 0.33) return lerp(-0.25, 1.0, (t - 0.30) / 0.03)
+      if (t < 0.36) return lerp(1.0, -0.35, (t - 0.33) / 0.03)
+      if (t < 0.40) return lerp(-0.35, 0, (t - 0.36) / 0.04)
+      if (t < 0.50) return 0
+      if (t < 0.57) return lerp(0, 0.28, (t - 0.50) / 0.07)
+      if (t < 0.65) return lerp(0.28, 0, (t - 0.57) / 0.08)
+      return 0
+    }
+
+    function drawLine(yCenterRatio, amplitudeRatio, alpha, patternPx, phase) {
+      const w = canvas.width
+      const h = canvas.height
+      const yCenter = h * yCenterRatio
+      const amp = h * amplitudeRatio
+      ctx.beginPath()
+      ctx.globalAlpha = alpha
+      for (let x = 0; x <= w; x++) {
+        const t = ((x + phase) % patternPx) / patternPx
+        const y = yCenter - ecgValue(t) * amp
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+      }
+      ctx.stroke()
+      ctx.globalAlpha = 1
+    }
+
+    function animate() {
+      const w = canvas.width
+      const h = canvas.height
+      if (!w || !h) { animFrameId = requestAnimationFrame(animate); return }
+
+      ctx.clearRect(0, 0, w, h)
+
+      // Subtle grid
+      ctx.strokeStyle = "rgba(74,222,128,0.06)"
+      ctx.lineWidth = 1
+      for (let x = 0; x < w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke() }
+      for (let y = 0; y < h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke() }
+
+      // Background faint lines
+      ctx.strokeStyle = "#4ade80"
+      ctx.lineWidth = 1
+      drawLine(0.2, 0.1, 0.15, 300, offset * 0.7)
+      drawLine(0.8, 0.1, 0.12, 300, offset * 1.3 + 150)
+
+      // Main ECG line with glow
+      ctx.lineWidth = 2
+      ctx.strokeStyle = "#4ade80"
+      ctx.shadowColor = "#4ade80"
+      ctx.shadowBlur = 10
+      drawLine(0.5, 0.28, 0.9, 260, offset)
+      ctx.shadowBlur = 0
+
+      // Second line, offset phase
+      ctx.lineWidth = 1.5
+      drawLine(0.5, 0.28, 0.2, 260, offset + 130)
+
+      offset += 1.2
+      animFrameId = requestAnimationFrame(animate)
+    }
+
+    animate()
+    return () => { cancelAnimationFrame(animFrameId); ro.disconnect() }
+  }, [])
+
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+}
+
 export default function AuthScreen() {
-  const [mode, setMode] = useState("login") // "login" | "signup"
+  const [mode, setMode] = useState("login")
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [resetSent, setResetSent] = useState(false)
 
-  function validateEmail(e) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
-  }
+  function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
-
-    if (!email || !password || (mode === "signup" && !fullName)) {
-      setError("Bütün sahələr doldurulmalıdır")
-      return
-    }
-    if (!validateEmail(email)) {
-      setError("E-poçt ünvanı düzgün deyil")
-      return
-    }
-    if (password.length < 6) {
-      setError("Şifrə minimum 6 simvol olmalıdır")
-      return
-    }
-    if (mode === "signup" && password !== confirmPassword) {
-      setError("Şifrələr uyğun deyil")
-      return
-    }
-
+    if (!email || !password || (mode === "signup" && !fullName)) { setError("Bütün sahələr doldurulmalıdır"); return }
+    if (!validateEmail(email)) { setError("E-poçt ünvanı düzgün deyil"); return }
+    if (password.length < 6) { setError("Şifrə minimum 6 simvol olmalıdır"); return }
+    if (mode === "signup" && password !== confirmPassword) { setError("Şifrələr uyğun deyil"); return }
     setLoading(true)
-
     if (mode === "login") {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-      if (err) {
-        setError("E-poçt və ya şifrə yanlışdır")
-      }
+      if (err) setError("E-poçt və ya şifrə yanlışdır")
     } else {
-      const { error: err } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
-      })
-      if (err) {
-        if (err.message.toLowerCase().includes("already")) {
-          setError("E-poçt artıq istifadə olunur")
-        } else {
-          setError(err.message)
-        }
-      } else {
-        setEmailSent(true)
-      }
+      const { error: err } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } })
+      if (err) setError(err.message.toLowerCase().includes("already") ? "E-poçt artıq istifadə olunur" : err.message)
+      else setEmailSent(true)
     }
-
     setLoading(false)
   }
 
@@ -77,191 +142,171 @@ export default function AuthScreen() {
 
   function switchMode() {
     setMode(mode === "login" ? "signup" : "login")
-    setError(null)
-    setFullName("")
-    setEmail("")
-    setPassword("")
-    setConfirmPassword("")
+    setError(null); setFullName(""); setEmail(""); setPassword(""); setConfirmPassword("")
   }
 
-  if (resetSent) return (
-    <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <span className="text-3xl font-medium text-indigo-700">ClinIQ</span>
-        </div>
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center">
-          <p className="text-2xl mb-3">🔑</p>
-          <p className="text-sm font-medium text-stone-800 mb-2">Şifrə sıfırlama linki göndərildi</p>
-          <p className="text-xs text-stone-400 leading-relaxed">
-            <span className="font-medium text-stone-600">{email}</span> ünvanına şifrə sıfırlama linki göndərildi.
-          </p>
-          <button
-            onClick={() => { setResetSent(false); setMode("login"); setEmail("") }}
-            className="mt-5 text-xs text-indigo-600 hover:underline">
-            Daxil olun
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+  const inputClass = "w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm bg-stone-50 text-stone-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 placeholder:text-stone-400 transition-all"
 
-  if (emailSent) return (
-    <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <span className="text-3xl font-medium text-indigo-700">ClinIQ</span>
-        </div>
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center">
-          <p className="text-2xl mb-3">📧</p>
-          <p className="text-sm font-medium text-stone-800 mb-2">E-poçtunuzu yoxlayın</p>
-          <p className="text-xs text-stone-400 leading-relaxed">
-            <span className="font-medium text-stone-600">{email}</span> ünvanına təsdiq linki göndərildi.
-            Linki açdıqdan sonra daxil ola bilərsiniz.
-          </p>
-          <button
-            onClick={() => { setEmailSent(false); setMode("login") }}
-            className="mt-5 text-xs text-indigo-600 hover:underline">
-            Daxil olun
-          </button>
-        </div>
-      </div>
+  if (resetSent || emailSent) return (
+    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #0d2b1d 0%, #071a0f 100%)" }}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+        <p className="text-3xl mb-3">{emailSent ? "📧" : "🔑"}</p>
+        <p className="text-sm font-semibold text-stone-800 mb-2">
+          {emailSent ? "E-poçtunuzu yoxlayın" : "Şifrə sıfırlama linki göndərildi"}
+        </p>
+        <p className="text-xs text-stone-400 leading-relaxed">
+          <span className="font-medium text-stone-600">{email}</span> ünvanına{" "}
+          {emailSent ? "təsdiq linki göndərildi. Linki açdıqdan sonra daxil ola bilərsiniz." : "şifrə sıfırlama linki göndərildi."}
+        </p>
+        <button onClick={() => { setEmailSent(false); setResetSent(false); setMode("login"); setEmail("") }}
+          className="mt-5 text-xs text-emerald-600 hover:underline">
+          Daxil olun
+        </button>
+      </motion.div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <span className="text-3xl font-medium text-indigo-700">ClinIQ</span>
-          <p className="text-sm text-stone-400 mt-1">Azərbaycan Tibbi Simulator</p>
+    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #0d2b1d 0%, #071a0f 100%)" }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-4xl overflow-hidden rounded-2xl flex shadow-2xl"
+      >
+        {/* Left panel — ECG animation */}
+        <div className="hidden md:flex md:w-1/2 relative overflow-hidden flex-col"
+          style={{ background: "linear-gradient(160deg, #0d2b1d 0%, #071a0f 100%)" }}>
+          <ECGCanvas />
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+              className="mb-6">
+              <div className="h-16 w-16 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)" }}>
+                <Stethoscope className="h-8 w-8" style={{ color: "#4ade80" }} />
+              </div>
+            </motion.div>
+            <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+              className="text-3xl font-bold mb-2 text-center" style={{ color: "#4ade80" }}>
+              ClinIQ
+            </motion.h2>
+            <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+              className="text-sm text-center max-w-xs" style={{ color: "rgba(187,247,208,0.6)" }}>
+              Azərbaycan Tibbi Kliniki Simulator
+            </motion.p>
+          </div>
         </div>
 
-        <div className="bg-white border border-stone-200 rounded-xl p-6">
-          <p className="text-sm font-medium text-stone-700 mb-4">
-            {mode === "login" ? "Daxil olun" : "Qeydiyyatdan keçin"}
-          </p>
+        {/* Right panel — Form */}
+        <div className="w-full md:w-1/2 p-8 md:p-10 flex flex-col justify-center bg-white">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
 
-          {mode === "forgot" && (
-            <form onSubmit={handleForgotPassword} className="flex flex-col gap-3">
-              <div>
-                <label className="text-xs text-stone-500 mb-1 block">E-poçt</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                />
-              </div>
-              {error && (
-                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-              )}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-2 rounded-lg text-sm transition-colors mt-1">
-                {loading ? "Gözləyin..." : "Şifrəni sıfırla"}
-              </button>
-              <p className="text-xs text-stone-400 text-center">
-                <button type="button" onClick={() => { setMode("login"); setError(null) }} className="text-indigo-600 hover:underline">
-                  Geri qayıt
-                </button>
-              </p>
-            </form>
-          )}
-
-          {mode !== "forgot" && <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            {mode === "signup" && (
-              <div>
-                <label className="text-xs text-stone-500 mb-1 block">Ad Soyad</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Adınız Soyadınız"
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="text-xs text-stone-500 mb-1 block">E-poçt</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-xs text-stone-500">Şifrə</label>
-                {mode === "login" && (
-                  <button type="button" onClick={() => { setMode("forgot"); setError(null) }} className="text-xs text-indigo-500 hover:underline">
-                    Şifrəni unutdunuz?
-                  </button>
-                )}
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 6 simvol"
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-              />
-            </div>
-
-            {mode === "signup" && (
-              <div>
-                <label className="text-xs text-stone-500 mb-1 block">Şifrəni təsdiqləyin</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Şifrəni təkrar daxil edin"
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                />
-              </div>
-            )}
-
-            {error && (
-              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-2 rounded-lg text-sm transition-colors mt-1">
-              {loading ? "Gözləyin..." : mode === "login" ? "Daxil ol" : "Qeydiyyat"}
-            </button>
-          </form>}
-
-          {mode !== "forgot" && (
-            <p className="text-xs text-stone-400 text-center mt-4">
-              {mode === "login" ? (
-                <>
-                  Hesabınız yoxdur?{" "}
-                  <button onClick={switchMode} className="text-indigo-600 hover:underline">
-                    Qeydiyyatdan keçin
-                  </button>
-                </>
-              ) : (
-                <>
-                  Artıq hesabınız var?{" "}
-                  <button onClick={switchMode} className="text-indigo-600 hover:underline">
-                    Daxil olun
-                  </button>
-                </>
-              )}
+            <h1 className="text-2xl md:text-3xl font-bold mb-1 text-stone-800">
+              {mode === "login" ? "Xoş gəldiniz" : mode === "signup" ? "Qeydiyyat" : "Şifrəni sıfırla"}
+            </h1>
+            <p className="text-stone-400 text-sm mb-8">
+              {mode === "login" ? "Hesabınıza daxil olun" : mode === "signup" ? "Yeni hesab yaradın" : "E-poçtunuzu daxil edin"}
             </p>
-          )}
+
+            {/* Forgot password form */}
+            {mode === "forgot" && (
+              <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">E-poçt</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                    placeholder="email@example.com" className={inputClass} />
+                </div>
+                {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+                <button type="submit" disabled={loading}
+                  className="w-full text-white font-medium py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ background: "linear-gradient(to right, #059669, #0d9488)" }}>
+                  {loading ? "Gözləyin..." : "Sıfırlama linki göndər"}
+                </button>
+                <p className="text-center text-xs text-stone-400">
+                  <button type="button" onClick={() => { setMode("login"); setError(null) }}
+                    className="text-emerald-600 hover:underline">Geri qayıt</button>
+                </p>
+              </form>
+            )}
+
+            {/* Login / Signup form */}
+            {mode !== "forgot" && (
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {mode === "signup" && (
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Ad Soyad</label>
+                    <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
+                      placeholder="Adınız Soyadınız" className={inputClass} />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">E-poçt</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                    placeholder="email@example.com" className={inputClass} />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-sm font-medium text-stone-700">Şifrə</label>
+                    {mode === "login" && (
+                      <button type="button" onClick={() => { setMode("forgot"); setError(null) }}
+                        className="text-xs text-emerald-600 hover:underline">
+                        Şifrəni unutdunuz?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input type={showPassword ? "text" : "password"} value={password}
+                      onChange={e => setPassword(e.target.value)} placeholder="Minimum 6 simvol"
+                      className={inputClass + " pr-10"} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-stone-400 hover:text-stone-600">
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                </div>
+
+                {mode === "signup" && (
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Şifrəni təsdiqləyin</label>
+                    <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="Şifrəni təkrar daxil edin" className={inputClass} />
+                  </div>
+                )}
+
+                {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+
+                <motion.button
+                  type="submit" disabled={loading}
+                  whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  className="w-full text-white font-medium py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-1"
+                  style={{ background: "linear-gradient(to right, #059669, #0d9488)" }}>
+                  {loading ? "Gözləyin..." : mode === "login" ? "Daxil ol" : "Qeydiyyat"}
+                  {!loading && <Stethoscope size={15} />}
+                </motion.button>
+
+                <p className="text-center text-xs text-stone-400 mt-1">
+                  {mode === "login" ? (
+                    <>Hesabınız yoxdur?{" "}
+                      <button type="button" onClick={switchMode} className="text-emerald-600 hover:underline">
+                        Qeydiyyatdan keçin
+                      </button>
+                    </>
+                  ) : (
+                    <>Artıq hesabınız var?{" "}
+                      <button type="button" onClick={switchMode} className="text-emerald-600 hover:underline">
+                        Daxil olun
+                      </button>
+                    </>
+                  )}
+                </p>
+              </form>
+            )}
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
