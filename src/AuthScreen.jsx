@@ -62,21 +62,21 @@ function ECGCanvas() {
       ctx.clearRect(0, 0, w, h)
 
       // Subtle grid
-      ctx.strokeStyle = "rgba(74,222,128,0.06)"
+      ctx.strokeStyle = "rgba(56,189,248,0.06)"
       ctx.lineWidth = 1
       for (let x = 0; x < w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke() }
       for (let y = 0; y < h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke() }
 
       // Background faint lines
-      ctx.strokeStyle = "#4ade80"
+      ctx.strokeStyle = "#38bdf8"
       ctx.lineWidth = 1
       drawLine(0.2, 0.1, 0.15, 300, offset * 0.7)
       drawLine(0.8, 0.1, 0.12, 300, offset * 1.3 + 150)
 
       // Main ECG line with glow
       ctx.lineWidth = 2
-      ctx.strokeStyle = "#4ade80"
-      ctx.shadowColor = "#4ade80"
+      ctx.strokeStyle = "#38bdf8"
+      ctx.shadowColor = "#38bdf8"
       ctx.shadowBlur = 10
       drawLine(0.5, 0.28, 0.9, 260, offset)
       ctx.shadowBlur = 0
@@ -145,10 +145,10 @@ export default function AuthScreen() {
     setError(null); setFullName(""); setEmail(""); setPassword(""); setConfirmPassword("")
   }
 
-  const inputClass = "w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm bg-stone-50 text-stone-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 placeholder:text-stone-400 transition-all"
+  const inputClass = "w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm bg-stone-50 text-stone-800 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 placeholder:text-stone-400 transition-all"
 
   if (resetSent || emailSent) return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #0d2b1d 0%, #071a0f 100%)" }}>
+    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #0d1f3c 0%, #060f20 100%)" }}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
         <p className="text-3xl mb-3">{emailSent ? "📧" : "🔑"}</p>
@@ -160,7 +160,7 @@ export default function AuthScreen() {
           {emailSent ? "təsdiq linki göndərildi. Linki açdıqdan sonra daxil ola bilərsiniz." : "şifrə sıfırlama linki göndərildi."}
         </p>
         <button onClick={() => { setEmailSent(false); setResetSent(false); setMode("login"); setEmail("") }}
-          className="mt-5 text-xs text-emerald-600 hover:underline">
+          className="mt-5 text-xs text-sky-600 hover:underline">
           Daxil olun
         </button>
       </motion.div>
@@ -168,7 +168,7 @@ export default function AuthScreen() {
   )
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #0d2b1d 0%, #071a0f 100%)" }}>
+    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #0d1f3c 0%, #060f20 100%)" }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -177,22 +177,15 @@ export default function AuthScreen() {
       >
         {/* Left panel — ECG animation */}
         <div className="hidden md:flex md:w-1/2 relative overflow-hidden flex-col"
-          style={{ background: "linear-gradient(160deg, #0d2b1d 0%, #071a0f 100%)" }}>
+          style={{ background: "linear-gradient(160deg, #0d1f3c 0%, #060f20 100%)" }}>
           <ECGCanvas />
           <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-              className="mb-6">
-              <div className="h-16 w-16 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)" }}>
-                <Stethoscope className="h-8 w-8" style={{ color: "#4ade80" }} />
-              </div>
-            </motion.div>
             <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-              className="text-3xl font-bold mb-2 text-center" style={{ color: "#4ade80" }}>
+              className="text-3xl font-bold mb-2 text-center" style={{ color: "#38bdf8" }}>
               ClinIQ
             </motion.h2>
             <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
-              className="text-sm text-center max-w-xs" style={{ color: "rgba(187,247,208,0.6)" }}>
+              className="text-sm text-center max-w-xs" style={{ color: "rgba(186,230,253,0.6)" }}>
               Azərbaycan Tibbi Kliniki Simulator
             </motion.p>
           </div>
@@ -220,12 +213,12 @@ export default function AuthScreen() {
                 {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
                 <button type="submit" disabled={loading}
                   className="w-full text-white font-medium py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "linear-gradient(to right, #059669, #0d9488)" }}>
+                  style={{ background: "linear-gradient(to right, #0284c7, #1d4ed8)" }}>
                   {loading ? "Gözləyin..." : "Sıfırlama linki göndər"}
                 </button>
                 <p className="text-center text-xs text-stone-400">
                   <button type="button" onClick={() => { setMode("login"); setError(null) }}
-                    className="text-emerald-600 hover:underline">Geri qayıt</button>
+                    className="text-sky-600 hover:underline">Geri qayıt</button>
                 </p>
               </form>
             )}
@@ -252,7 +245,7 @@ export default function AuthScreen() {
                     <label className="text-sm font-medium text-stone-700">Şifrə</label>
                     {mode === "login" && (
                       <button type="button" onClick={() => { setMode("forgot"); setError(null) }}
-                        className="text-xs text-emerald-600 hover:underline">
+                        className="text-xs text-sky-600 hover:underline">
                         Şifrəni unutdunuz?
                       </button>
                     )}
@@ -282,7 +275,7 @@ export default function AuthScreen() {
                   type="submit" disabled={loading}
                   whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                   className="w-full text-white font-medium py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-1"
-                  style={{ background: "linear-gradient(to right, #059669, #0d9488)" }}>
+                  style={{ background: "linear-gradient(to right, #0284c7, #1d4ed8)" }}>
                   {loading ? "Gözləyin..." : mode === "login" ? "Daxil ol" : "Qeydiyyat"}
                   {!loading && <Stethoscope size={15} />}
                 </motion.button>
@@ -290,13 +283,13 @@ export default function AuthScreen() {
                 <p className="text-center text-xs text-stone-400 mt-1">
                   {mode === "login" ? (
                     <>Hesabınız yoxdur?{" "}
-                      <button type="button" onClick={switchMode} className="text-emerald-600 hover:underline">
+                      <button type="button" onClick={switchMode} className="text-sky-600 hover:underline">
                         Qeydiyyatdan keçin
                       </button>
                     </>
                   ) : (
                     <>Artıq hesabınız var?{" "}
-                      <button type="button" onClick={switchMode} className="text-emerald-600 hover:underline">
+                      <button type="button" onClick={switchMode} className="text-sky-600 hover:underline">
                         Daxil olun
                       </button>
                     </>
