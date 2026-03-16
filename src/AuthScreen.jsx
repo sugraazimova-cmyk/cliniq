@@ -62,21 +62,21 @@ function ECGCanvas() {
       ctx.clearRect(0, 0, w, h)
 
       // Subtle grid
-      ctx.strokeStyle = "rgba(56,189,248,0.06)"
+      ctx.strokeStyle = "rgba(21,101,192,0.08)"
       ctx.lineWidth = 1
       for (let x = 0; x < w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke() }
       for (let y = 0; y < h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke() }
 
       // Background faint lines
-      ctx.strokeStyle = "#38bdf8"
+      ctx.strokeStyle = "#1565c0"
       ctx.lineWidth = 1
       drawLine(0.2, 0.1, 0.15, 300, offset * 0.7)
       drawLine(0.8, 0.1, 0.12, 300, offset * 1.3 + 150)
 
       // Main ECG line with glow
       ctx.lineWidth = 2
-      ctx.strokeStyle = "#38bdf8"
-      ctx.shadowColor = "#38bdf8"
+      ctx.strokeStyle = "#1565c0"
+      ctx.shadowColor = "#1565c0"
       ctx.shadowBlur = 10
       drawLine(0.5, 0.28, 0.9, 260, offset)
       ctx.shadowBlur = 0
@@ -148,7 +148,7 @@ export default function AuthScreen() {
   const inputClass = "w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm bg-stone-50 text-stone-800 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 placeholder:text-stone-400 transition-all"
 
   if (resetSent || emailSent) return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #0d1f3c 0%, #060f20 100%)" }}>
+    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "#90caf9" }}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
         <p className="text-3xl mb-3">{emailSent ? "📧" : "🔑"}</p>
@@ -168,7 +168,7 @@ export default function AuthScreen() {
   )
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #0d1f3c 0%, #060f20 100%)" }}>
+    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "#90caf9" }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -177,16 +177,20 @@ export default function AuthScreen() {
       >
         {/* Left panel — ECG animation */}
         <div className="hidden md:flex md:w-1/2 relative overflow-hidden flex-col"
-          style={{ background: "linear-gradient(160deg, #0d1f3c 0%, #060f20 100%)" }}>
+          style={{ background: "#90caf9" }}>
           <ECGCanvas />
           <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
             <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-              className="text-3xl font-bold mb-2 text-center" style={{ color: "#38bdf8" }}>
+              className="text-3xl font-bold mb-1 text-center" style={{ color: "#0d47a1" }}>
               ClinIQ
             </motion.h2>
-            <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
-              className="text-sm text-center max-w-xs" style={{ color: "rgba(186,230,253,0.6)" }}>
-              Azərbaycan Tibbi Kliniki Simulator
+            <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+              className="text-sm font-semibold text-center max-w-xs mb-3" style={{ color: "#1565c0" }}>
+              Tibb tələbələri üçün ağıllı tədris mühiti
+            </motion.p>
+            <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}
+              className="text-xs text-center max-w-xs leading-relaxed" style={{ color: "rgba(13,71,161,0.7)" }}>
+              Klinik halları analiz et, biliklərini möhkəmləndir və tədrisini daha effektiv təşkil et.
             </motion.p>
           </div>
         </div>
