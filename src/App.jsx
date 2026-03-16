@@ -3,6 +3,7 @@ import { supabase } from './supabase.js'
 import AuthScreen from './AuthScreen.jsx'
 import ProfileDrawer from './ProfileDrawer.jsx'
 import FeaturesPage from './FeaturesPage.jsx'
+import CasesPage from './CasesPage.jsx'
 
 function mapCase(row) {
   return {
@@ -282,63 +283,16 @@ export default function App() {
 
   if (!selectedCase) {
     return (
-      <div className="min-h-screen bg-stone-100 p-4">
-        <div className="max-w-xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setPage("features")}
-                className="text-sm text-stone-400 hover:text-stone-700 transition-colors">
-                ←
-              </button>
-              <span className="text-2xl font-medium text-indigo-700">ClinIQ</span>
-            </div>
-            <button
-              onClick={() => setShowProfile(true)}
-              className="text-sm font-medium text-stone-600 hover:text-indigo-600 transition-colors">
-              {session.user.user_metadata.full_name ?? session.user.email}
-            </button>
-          </div>
-          <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Kliniki hal seçin</p>
-          {cases.map((c) => {
-            const isBookmarked = bookmarkedIds.has(c.id)
-            return (
-              <div
-                key={c.id}
-                onClick={() => setSelectedCase(c)}
-                className="bg-white border border-stone-200 rounded-xl p-4 mb-3 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
-              >
-                <div className="flex justify-between items-start mb-1">
-                  <p className="font-medium text-stone-800">Kliniki hal {c.id} — {c.specialty}</p>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full
-                      ${c.difficulty === "Çətin" ? "bg-red-100 text-red-700" :
-                        c.difficulty === "Orta" ? "bg-amber-100 text-amber-700" :
-                        "bg-green-100 text-green-700"}`}>
-                      {c.difficulty}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (isBookmarked) {
-                          supabase.from('bookmarks').delete().match({ user_id: session.user.id, case_id: c.id }).then(() => {})
-                          setBookmarkedIds(prev => { const s = new Set(prev); s.delete(c.id); return s })
-                        } else {
-                          supabase.from('bookmarks').insert({ user_id: session.user.id, case_id: c.id, case_title: c.title ?? `Hal ${c.id}` }).then(() => {})
-                          setBookmarkedIds(prev => new Set([...prev, c.id]))
-                        }
-                      }}
-                      className="text-stone-300 hover:text-amber-500 transition-colors text-base leading-none"
-                      title={isBookmarked ? "Saxlanmışdan çıxar" : "Saxla"}>
-                      {isBookmarked ? "★" : "☆"}
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs text-stone-400">{c.tags[0]} · {c.tags[1]}</p>
-              </div>
-            )
-          })}
-        </div>
+      <>
+        <CasesPage
+          session={session}
+          cases={cases}
+          bookmarkedIds={bookmarkedIds}
+          setBookmarkedIds={setBookmarkedIds}
+          onSelectCase={(c) => setSelectedCase(c)}
+          onBack={() => setPage("features")}
+          setShowProfile={setShowProfile}
+        />
         <ProfileDrawer
           open={showProfile}
           onClose={() => setShowProfile(false)}
@@ -348,7 +302,7 @@ export default function App() {
           setBookmarkedIds={setBookmarkedIds}
           onSelectCase={(id) => { setSelectedCase(cases.find(x => x.id === id) ?? null); setShowProfile(false) }}
         />
-      </div>
+      </>
     )
   }
 
