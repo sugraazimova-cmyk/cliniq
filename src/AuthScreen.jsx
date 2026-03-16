@@ -62,21 +62,21 @@ function ECGCanvas() {
       ctx.clearRect(0, 0, w, h)
 
       // Subtle grid
-      ctx.strokeStyle = "rgba(21,101,192,0.08)"
+      ctx.strokeStyle = "rgba(91,101,220,0.08)"
       ctx.lineWidth = 1
       for (let x = 0; x < w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke() }
       for (let y = 0; y < h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke() }
 
       // Background faint lines
-      ctx.strokeStyle = "#1565c0"
+      ctx.strokeStyle = "#5B65DC"
       ctx.lineWidth = 1
       drawLine(0.2, 0.1, 0.15, 300, offset * 0.7)
       drawLine(0.8, 0.1, 0.12, 300, offset * 1.3 + 150)
 
       // Main ECG line with glow
       ctx.lineWidth = 2
-      ctx.strokeStyle = "#1565c0"
-      ctx.shadowColor = "#1565c0"
+      ctx.strokeStyle = "#5B65DC"
+      ctx.shadowColor = "#5B65DC"
       ctx.shadowBlur = 10
       drawLine(0.5, 0.28, 0.9, 260, offset)
       ctx.shadowBlur = 0
@@ -145,22 +145,25 @@ export default function AuthScreen() {
     setError(null); setFullName(""); setEmail(""); setPassword(""); setConfirmPassword("")
   }
 
-  const inputClass = "w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm bg-stone-50 text-stone-800 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 placeholder:text-stone-400 transition-all"
+  const inputClass = "w-full border border-[#EEEFFD] rounded-lg px-3 py-2.5 text-sm outline-none transition-all placeholder:text-[#5B65DC]/30"
+    + " focus:border-[#5B65DC] focus:ring-2 focus:ring-[#5B65DC]/10"
+    + " text-[#122056]"
+    + " bg-[#FAFAFD]"
 
   if (resetSent || emailSent) return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "#90caf9" }}>
+    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "#FAFAFD" }}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
         <p className="text-3xl mb-3">{emailSent ? "📧" : "🔑"}</p>
-        <p className="text-sm font-semibold text-stone-800 mb-2">
+        <p className="text-sm font-semibold mb-2" style={{ color: "#122056" }}>
           {emailSent ? "E-poçtunuzu yoxlayın" : "Şifrə sıfırlama linki göndərildi"}
         </p>
-        <p className="text-xs text-stone-400 leading-relaxed">
-          <span className="font-medium text-stone-600">{email}</span> ünvanına{" "}
+        <p className="text-xs leading-relaxed" style={{ color: "#475467" }}>
+          <span className="font-medium" style={{ color: "#122056" }}>{email}</span> ünvanına{" "}
           {emailSent ? "təsdiq linki göndərildi. Linki açdıqdan sonra daxil ola bilərsiniz." : "şifrə sıfırlama linki göndərildi."}
         </p>
         <button onClick={() => { setEmailSent(false); setResetSent(false); setMode("login"); setEmail("") }}
-          className="mt-5 text-xs text-sky-600 hover:underline">
+          className="mt-5 text-xs hover:underline" style={{ color: "#5B65DC" }}>
           Daxil olun
         </button>
       </motion.div>
@@ -168,7 +171,7 @@ export default function AuthScreen() {
   )
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "#90caf9" }}>
+    <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: "#FAFAFD" }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -177,19 +180,19 @@ export default function AuthScreen() {
       >
         {/* Left panel — ECG animation */}
         <div className="hidden md:flex md:w-1/2 relative overflow-hidden flex-col"
-          style={{ background: "#90caf9" }}>
+          style={{ background: "#EEEFFD" }}>
           <ECGCanvas />
           <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
             <motion.h2 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-              className="text-3xl font-bold mb-1 text-center" style={{ color: "#0d47a1" }}>
+              className="text-3xl font-bold mb-1 text-center" style={{ color: "#122056" }}>
               ClinIQ
             </motion.h2>
             <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-              className="text-sm font-semibold text-center max-w-xs mb-3" style={{ color: "#1565c0" }}>
+              className="text-sm font-semibold text-center max-w-xs mb-3" style={{ color: "#5B65DC" }}>
               Tibb tələbələri üçün ağıllı tədris mühiti
             </motion.p>
             <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}
-              className="text-xs text-center max-w-xs leading-relaxed" style={{ color: "rgba(13,71,161,0.7)" }}>
+              className="text-xs text-center max-w-xs leading-relaxed" style={{ color: "rgba(18,32,86,0.6)" }}>
               Klinik halları analiz et, biliklərini möhkəmləndir və tədrisini daha effektiv təşkil et.
             </motion.p>
           </div>
@@ -199,10 +202,10 @@ export default function AuthScreen() {
         <div className="w-full md:w-1/2 p-8 md:p-10 flex flex-col justify-center bg-white">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
 
-            <h1 className="text-2xl md:text-3xl font-bold mb-1 text-stone-800">
+            <h1 className="text-2xl md:text-3xl font-bold mb-1" style={{ color: "#122056" }}>
               {mode === "login" ? "Xoş gəldiniz" : mode === "signup" ? "Qeydiyyat" : "Şifrəni sıfırla"}
             </h1>
-            <p className="text-stone-400 text-sm mb-8">
+            <p className="text-sm mb-8" style={{ color: "#475467" }}>
               {mode === "login" ? "Hesabınıza daxil olun" : mode === "signup" ? "Yeni hesab yaradın" : "E-poçtunuzu daxil edin"}
             </p>
 
@@ -210,19 +213,19 @@ export default function AuthScreen() {
             {mode === "forgot" && (
               <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">E-poçt</label>
+                  <label className="block text-sm font-medium mb-1" style={{ color: "#475467" }}>E-poçt</label>
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                     placeholder="email@example.com" className={inputClass} />
                 </div>
                 {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
                 <button type="submit" disabled={loading}
                   className="w-full text-white font-medium py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "linear-gradient(to right, #0284c7, #1d4ed8)" }}>
+                  style={{ background: "#5B65DC" }}>
                   {loading ? "Gözləyin..." : "Sıfırlama linki göndər"}
                 </button>
-                <p className="text-center text-xs text-stone-400">
+                <p className="text-center text-xs" style={{ color: "#475467" }}>
                   <button type="button" onClick={() => { setMode("login"); setError(null) }}
-                    className="text-sky-600 hover:underline">Geri qayıt</button>
+                    className="hover:underline" style={{ color: "#5B65DC" }}>Geri qayıt</button>
                 </p>
               </form>
             )}
@@ -232,24 +235,24 @@ export default function AuthScreen() {
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 {mode === "signup" && (
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Ad Soyad</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: "#475467" }}>Ad Soyad</label>
                     <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
                       placeholder="Adınız Soyadınız" className={inputClass} />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">E-poçt</label>
+                  <label className="block text-sm font-medium mb-1" style={{ color: "#475467" }}>E-poçt</label>
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                     placeholder="email@example.com" className={inputClass} />
                 </div>
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-sm font-medium text-stone-700">Şifrə</label>
+                    <label className="text-sm font-medium" style={{ color: "#475467" }}>Şifrə</label>
                     {mode === "login" && (
                       <button type="button" onClick={() => { setMode("forgot"); setError(null) }}
-                        className="text-xs text-sky-600 hover:underline">
+                        className="text-xs hover:underline" style={{ color: "#5B65DC" }}>
                         Şifrəni unutdunuz?
                       </button>
                     )}
@@ -259,7 +262,7 @@ export default function AuthScreen() {
                       onChange={e => setPassword(e.target.value)} placeholder="Minimum 6 simvol"
                       className={inputClass + " pr-10"} />
                     <button type="button" onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-stone-400 hover:text-stone-600">
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-stone-400 hover:text-[#5B65DC]">
                       {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                     </button>
                   </div>
@@ -267,7 +270,7 @@ export default function AuthScreen() {
 
                 {mode === "signup" && (
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1">Şifrəni təsdiqləyin</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: "#475467" }}>Şifrəni təsdiqləyin</label>
                     <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
                       placeholder="Şifrəni təkrar daxil edin" className={inputClass} />
                   </div>
@@ -279,21 +282,21 @@ export default function AuthScreen() {
                   type="submit" disabled={loading}
                   whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
                   className="w-full text-white font-medium py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-1"
-                  style={{ background: "linear-gradient(to right, #0284c7, #1d4ed8)" }}>
+                  style={{ background: "#5B65DC" }}>
                   {loading ? "Gözləyin..." : mode === "login" ? "Daxil ol" : "Qeydiyyat"}
                   {!loading && <Stethoscope size={15} />}
                 </motion.button>
 
-                <p className="text-center text-xs text-stone-400 mt-1">
+                <p className="text-center text-xs mt-1" style={{ color: "#475467" }}>
                   {mode === "login" ? (
                     <>Hesabınız yoxdur?{" "}
-                      <button type="button" onClick={switchMode} className="text-sky-600 hover:underline">
+                      <button type="button" onClick={switchMode} className="hover:underline" style={{ color: "#5B65DC" }}>
                         Qeydiyyatdan keçin
                       </button>
                     </>
                   ) : (
                     <>Artıq hesabınız var?{" "}
-                      <button type="button" onClick={switchMode} className="text-sky-600 hover:underline">
+                      <button type="button" onClick={switchMode} className="hover:underline" style={{ color: "#5B65DC" }}>
                         Daxil olun
                       </button>
                     </>
