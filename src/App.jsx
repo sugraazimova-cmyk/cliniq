@@ -146,14 +146,11 @@ export default function App() {
   useEffect(() => {
     if (currentStep !== 5 || !selectedCase || !session) return
     const c = selectedCase
-    const treatmentScore = c.treatmentOptions?.length > 0
-      ? selectedTreatments.reduce((acc, idx) => acc + (c.treatmentOptions[idx].correct ? 5 : -3), 0)
-      : 0
     supabase.from('case_attempts').insert({
       user_id: session.user.id,
       case_id: c.id,
       case_title: c.title ?? `Hal ${c.id}`,
-      score: score + treatmentScore,
+      score: score,
     }).then(() => {})
   }, [currentStep]) // eslint-disable-line
 
@@ -215,6 +212,16 @@ export default function App() {
     setSelectedTreatments(prev =>
       prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
     )
+  }
+
+  function submitTreatment() {
+    const opts = selectedCase.treatmentOptions
+    const correctCount = opts.filter(o => o.correct).length
+    const pointsEach = correctCount > 0 ? Math.round(20 / correctCount) : 0
+    const earned = selectedTreatments.reduce((sum, i) =>
+      sum + (opts[i].correct ? pointsEach : 0), 0)
+    setScore(s => s + earned)
+    setCurrentStep(5)
   }
 
   function resetAll() {
@@ -716,11 +723,8 @@ export default function App() {
 
         {/* ── Step 5: Results ───────────────────────────────────────────── */}
         {currentStep === 5 && (() => {
-          // Tally treatment score here to avoid setScore in render
-          const treatmentScore = (c.treatmentOptions?.length > 0)
-            ? selectedTreatments.reduce((acc, idx) => acc + (c.treatmentOptions[idx].correct ? 5 : -3), 0)
-            : 0
-          const totalScore = score + treatmentScore
+          // Treatment score already added by submitTreatment
+          const totalScore = score
 
           return (
             <div className="mb-3">
@@ -873,10 +877,10 @@ export default function App() {
                 )}
                 <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">Müalicə protokolu</p>
                 <div className="flex flex-col gap-1">
-                  {c.treatmentPoints.map((point, i) => (
+                  {c.treatmentOptions.filter(o => o.correct).map((opt, i) => (
                     <div key={i} className="flex items-start gap-2 text-sm text-stone-600">
                       <span className="text-indigo-400 mt-0.5">→</span>
-                      <span>{point}</span>
+                      <span>{opt.text}</span>
                     </div>
                   ))}
                 </div>
@@ -890,13 +894,22 @@ export default function App() {
           )
         })()}
 
-        {/* Shared next-step button (steps 0, 1, 2, 4) */}
-        {currentStep < 5 && currentStep !== 3 && (
+        {/* Shared next-step button (steps 0, 1, 2) */}
+        {currentStep < 5 && currentStep !== 3 && currentStep !== 4 && (
           <button
             onClick={() => setCurrentStep(s => s + 1)}
             disabled={currentStep === 0 && selectedQuestions.length === 0}
             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
             Növbəti mərhələ →
+          </button>
+        )}
+
+        {/* Step 4 submit button */}
+        {currentStep === 4 && (
+          <button onClick={submitTreatment}
+            disabled={selectedTreatments.length === 0}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-3 rounded-xl text-sm transition-colors">
+            Müalicəni təsdiqlə →
           </button>
         )}
 
