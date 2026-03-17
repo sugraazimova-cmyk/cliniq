@@ -712,7 +712,7 @@ export default function App() {
                           ${selected ? "bg-indigo-50 border-indigo-200 text-indigo-900"
                             : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
                         <div className="flex justify-between items-center gap-2">
-                          <span className="flex-1">{opt.text}</span>
+                          <span className="flex-1">{opt.text.split(' — ')[0]}</span>
                           {selected && <span className="text-indigo-500 shrink-0">✓</span>}
                         </div>
                       </button>
