@@ -103,6 +103,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
@@ -119,8 +120,14 @@ export default function AuthScreen() {
     if (mode === "signup" && password !== confirmPassword) { setError("Şifrələr uyğun deyil"); return }
     setLoading(true)
     if (mode === "login") {
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error: err } = await supabase.auth.signInWithPassword({ email, password })
       if (err) setError("E-poçt və ya şifrə yanlışdır")
+      else if (rememberMe && data.session) {
+        localStorage.setItem('sb-remember', JSON.stringify({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        }))
+      }
     } else {
       const { error: err } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } })
       if (err) setError(err.message.toLowerCase().includes("already") ? "E-poçt artıq istifadə olunur" : err.message)
@@ -277,6 +284,18 @@ export default function AuthScreen() {
                 )}
 
                 {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+
+                {mode === "login" && (
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={e => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 rounded accent-[#5B65DC]"
+                    />
+                    <span className="text-xs" style={{ color: "#475467" }}>Məni yadda saxla</span>
+                  </label>
+                )}
 
                 <motion.button
                   type="submit" disabled={loading}

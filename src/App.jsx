@@ -76,8 +76,22 @@ export default function App() {
   const [session, setSession] = useState(undefined)
 
   useEffect(() => {
+    const stored = localStorage.getItem('sb-remember')
+    if (stored) {
+      try {
+        const { access_token, refresh_token } = JSON.parse(stored)
+        supabase.auth.setSession({ access_token, refresh_token })
+          .catch(() => localStorage.removeItem('sb-remember'))
+      } catch {
+        localStorage.removeItem('sb-remember')
+      }
+    }
+
     supabase.auth.getSession().then(({ data: { session: s } }) => setSession(s))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (_event === 'SIGNED_OUT') localStorage.removeItem('sb-remember')
+      setSession(s)
+    })
     return () => subscription.unsubscribe()
   }, [])
 
