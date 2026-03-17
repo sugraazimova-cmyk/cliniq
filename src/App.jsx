@@ -900,9 +900,13 @@ export default function App() {
                 </div>
               </div>
 
-              <button onClick={resetAll}
+              <button onClick={() => { resetAll(); setPage("cases") }}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
-                Başqa xəstə seç →
+                Başqa xəstəyə keç →
+              </button>
+              <button onClick={resetAll}
+                className="w-full bg-white border border-stone-200 hover:bg-stone-50 text-stone-600 font-medium py-3 rounded-xl text-sm transition-colors mt-2">
+                Ana səhifəyə qayıt
               </button>
             </div>
           )
