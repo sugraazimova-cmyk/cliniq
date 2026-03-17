@@ -2,7 +2,7 @@ import { motion } from "framer-motion"
 import { Layers, Stethoscope, CalendarDays, Timer, BookMarked } from "lucide-react"
 import { BentoCard, BentoGrid } from "./components/ui/bento-grid.jsx"
 
-export default function FeaturesPage({ session, onEnterCases, setShowProfile }) {
+export default function FeaturesPage({ session, onEnterCases, onEnterFlashcards, setShowProfile }) {
   const name = session?.user?.user_metadata?.full_name ?? session?.user?.email ?? ""
   const firstName = name.split(" ")[0]
 
@@ -23,9 +23,10 @@ export default function FeaturesPage({ session, onEnterCases, setShowProfile }) 
       Icon: Layers,
       name: "Öyrənmə kartları",
       description: "Flashcard-larla tibbi terminologiya və faktları tez-tez təkrar et.",
-      cta: "Aç",
-      disabled: true,
-      background: <div className="absolute inset-0 bg-gradient-to-br from-[#FAFAFD] to-white" />,
+      cta: "Başla",
+      disabled: false,
+      onClick: onEnterFlashcards,
+      background: <div className="absolute inset-0 bg-gradient-to-br from-[#EEEFFD] via-white to-white" />,
       className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
     },
     {

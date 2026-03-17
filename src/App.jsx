@@ -4,6 +4,7 @@ import AuthScreen from './AuthScreen.jsx'
 import ProfileDrawer from './ProfileDrawer.jsx'
 import FeaturesPage from './FeaturesPage.jsx'
 import CasesPage from './CasesPage.jsx'
+import FlashcardsPage from './FlashcardsPage.jsx'
 
 function mapCase(row) {
   return {
@@ -134,7 +135,6 @@ export default function App() {
   const [differentialPicks, setDifferentialPicks] = useState([])
   const [diagnosisStage, setDiagnosisStage] = useState("differential")
   const [diagnosis, setDiagnosis] = useState("")
-  const [isDiagnosing, setIsDiagnosing] = useState(false)
   const [diagnosisResult, setDiagnosisResult] = useState(null)
 
   // Treatment
@@ -205,47 +205,19 @@ export default function App() {
       .replace(/[()]/g, '').replace(/\s+/g, ' ').trim()
   }
 
-  async function checkDiagnosis(override) {
-    const value = override ?? diagnosis
-    if (!value.trim() || isDiagnosing) return
-    setIsDiagnosing(true)
-    if (override) setDiagnosis(override)
-
-    const normStudent = normalizeDx(value)
+  function checkDiagnosis(label) {
+    if (!label) return
+    setDiagnosis(label)
+    const normStudent = normalizeDx(label)
     const normCorrect = normalizeDx(selectedCase.correctDiagnosis)
     const keywords = (selectedCase.diagnosisKeywords ?? []).map(normalizeDx)
-
-    const localMatch =
+    const correct =
       normStudent === normCorrect ||
       normCorrect.includes(normStudent) ||
       normStudent.includes(normCorrect) ||
       keywords.some(k => k && (normStudent.includes(k) || k.includes(normStudent)))
-
-    if (localMatch) {
-      setDiagnosisResult(true)
-      setScore(s => s + 20)
-      setIsDiagnosing(false)
-      return
-    }
-
-    try {
-      const res = await fetch("/api/diagnose", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentDiagnosis: value,
-          correctDiagnosis: selectedCase.correctDiagnosis,
-          diagnosisKeywords: selectedCase.diagnosisKeywords,
-        }),
-      })
-      const data = await res.json()
-      const correct = data.correct === true
-      setDiagnosisResult(correct)
-      if (correct) setScore(s => s + 20)
-    } catch {
-      setDiagnosisResult(false)
-    }
-    setIsDiagnosing(false)
+    setDiagnosisResult(correct)
+    if (correct) setScore(s => s + 20)
   }
 
   function toggleTreatment(idx) {
@@ -275,7 +247,6 @@ export default function App() {
     setDiagnosisStage("differential")
     setDiagnosis("")
     setDiagnosisResult(null)
-    setIsDiagnosing(false)
     setSelectedTreatments([])
     setTreatment("")
     setScore(0)
@@ -303,6 +274,12 @@ export default function App() {
     </div>
   )
 
+  // ── Flashcards page ─────────────────────────────────────────────────────
+
+  if (page === "flashcards") {
+    return <FlashcardsPage onBack={() => setPage("features")} />
+  }
+
   // ── Features page ───────────────────────────────────────────────────────
 
   if (!selectedCase && page === "features") {
@@ -311,6 +288,7 @@ export default function App() {
         <FeaturesPage
           session={session}
           onEnterCases={() => setPage("cases")}
+          onEnterFlashcards={() => setPage("flashcards")}
           setShowProfile={setShowProfile}
         />
         <ProfileDrawer
@@ -677,8 +655,7 @@ export default function App() {
                           <button
                             key={idx}
                             onClick={() => checkDiagnosis(label)}
-                            disabled={isDiagnosing}
-                            className="px-3 py-1.5 rounded-full text-sm border transition-colors hover:bg-[#EEEFFD] disabled:opacity-50"
+                            className="px-3 py-1.5 rounded-full text-sm border transition-colors hover:bg-[#EEEFFD]"
                             style={{ borderColor: "#EEEFFD", background: "#FAFAFD", color: "#5B65DC" }}>
                             {label}
                           </button>
@@ -702,26 +679,6 @@ export default function App() {
                     </div>
                     <div className="border-t border-stone-100 mt-3 mb-3" />
                   </div>
-                )}
-
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-3">Əsas diaqnoz</p>
-                <input
-                  type="text"
-                  value={diagnosis}
-                  onChange={(e) => setDiagnosis(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && checkDiagnosis()}
-                  placeholder="Diaqnozunuzu yazın..."
-                  disabled={diagnosisResult !== null}
-                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm text-stone-800 mb-3 outline-none focus:border-indigo-400 disabled:bg-stone-50 disabled:text-stone-400"
-                />
-
-                {diagnosisResult === null && (
-                  <button
-                    onClick={checkDiagnosis}
-                    disabled={!diagnosis.trim() || isDiagnosing}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-2 rounded-xl text-sm transition-colors">
-                    {isDiagnosing ? "Yoxlanılır..." : "Diaqnozu yoxla"}
-                  </button>
                 )}
 
                 {diagnosisResult === true && (

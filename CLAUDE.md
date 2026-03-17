@@ -44,10 +44,10 @@ Routing is controlled by three state variables in `App.jsx`:
 
 Steps are rendered conditionally on `currentStep` (0–5) in `App.jsx`:
 
-1. **Anamnez (0)** — Student picks up to 5 history questions from a list; AI chat via `/api/chat` returns stored answers. Tags/points hidden until selected.
+1. **Anamnez (0)** — Student picks up to 5 history questions from a list; answers come from stored case data. Tags/points hidden until selected.
 2. **Müayinə (1)** — Interactive patient image with pulsing alert dots; clicking a dot reveals an exam finding.
 3. **Analizlər (2)** — Student orders up to 5 lab investigations from a list.
-4. **Diaqnoz (3)** — Two-stage: pick differential diagnoses (up to 3), then select final diagnosis from clickable chips or free-text input. Local normalization check runs before Gemini fallback.
+4. **Diaqnoz (3)** — Two-stage: pick differential diagnoses (up to 3), then select final diagnosis from clickable chips. Local normalization check determines correct/wrong.
 5. **Müalicə (4)** — Select treatment options from a list; `submitTreatment()` awards 20 pts split across correct options.
 6. **Nəticə (5)** — Score breakdown. Two exit buttons: "Başqa xəstəyə keç" (→ cases list) and "Ana səhifəyə qayıt" (→ features hub).
 
@@ -74,15 +74,13 @@ All tables have RLS policies scoped to `auth.uid() = user_id`.
 
 | File | Purpose |
 |------|---------|
-| [api/chat.js](api/chat.js) | Anamnesis AI: fuzzy-matches student question to best stored Q&A pair via Gemini 2.0 Flash. |
-| [api/diagnose.js](api/diagnose.js) | Diagnosis check: local normalization first, Gemini fallback. Returns `{ correct: boolean }`. |
 | [api/delete-account.js](api/delete-account.js) | Edge function: deletes user via Supabase Admin API using `SUPABASE_SERVICE_ROLE_KEY`. |
 
 ### Required env vars
 
 | Variable | Used in |
 |----------|---------|
-| `GEMINI_API_KEY` | `api/chat.js`, `api/diagnose.js` |
+| `ANTHROPIC_API_KEY` | `api/flashcards.js`, `api/flashcards-parse.js` |
 | `VITE_SUPABASE_URL` | `src/supabase.js` |
 | `VITE_SUPABASE_ANON_KEY` | `src/supabase.js` |
 | `SUPABASE_URL` | `api/delete-account.js` |
