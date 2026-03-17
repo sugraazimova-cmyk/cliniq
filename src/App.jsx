@@ -373,8 +373,10 @@ export default function App() {
               className="text-xs text-stone-400 hover:text-indigo-600 transition-colors">
               {session.user.user_metadata.full_name?.split(' ')[0] ?? session.user.email}
             </button>
-            <button onClick={resetAll} className="text-xs text-stone-400 hover:text-stone-600">
-              ← Geri
+            <button
+              onClick={() => { resetAll(); setPage("cases") }}
+              className="text-xs font-medium px-2.5 py-1 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-700 transition-colors">
+              ← Xəstə seç
             </button>
           </div>
         </div>
@@ -382,9 +384,13 @@ export default function App() {
         {/* Step progress */}
         <div className="flex rounded-lg overflow-hidden border border-stone-200 mb-4">
           {STEPS.map((step, i) => (
-            <div key={step} className={`flex-1 py-2 text-center text-xs font-medium border-r border-stone-200 last:border-r-0
-              ${i === currentStep ? "bg-indigo-100 text-indigo-700" :
-                i < currentStep ? "bg-emerald-50 text-emerald-700" : "bg-white text-stone-400"}`}>
+            <div
+              key={step}
+              onClick={() => i < currentStep && setCurrentStep(i)}
+              className={`flex-1 py-2 text-center text-xs font-medium border-r border-stone-200 last:border-r-0 transition-colors
+                ${i === currentStep ? "bg-indigo-100 text-indigo-700" :
+                  i < currentStep ? "bg-emerald-50 text-emerald-700 cursor-pointer hover:bg-emerald-100" :
+                  "bg-white text-stone-400"}`}>
               {step}
             </div>
           ))}
