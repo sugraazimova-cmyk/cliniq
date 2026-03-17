@@ -199,15 +199,41 @@ export default function App() {
     setDifferentialPicks(prev => [...prev, idx])
   }
 
-  async function checkDiagnosis() {
-    if (!diagnosis.trim() || isDiagnosing) return
+  function normalizeDx(s) {
+    return s.toLowerCase()
+      .replace(/i̇/g, 'i').replace(/ı/g, 'i').replace(/İ/g, 'i').replace(/I/g, 'i')
+      .replace(/[()]/g, '').replace(/\s+/g, ' ').trim()
+  }
+
+  async function checkDiagnosis(override) {
+    const value = override ?? diagnosis
+    if (!value.trim() || isDiagnosing) return
     setIsDiagnosing(true)
+    if (override) setDiagnosis(override)
+
+    const normStudent = normalizeDx(value)
+    const normCorrect = normalizeDx(selectedCase.correctDiagnosis)
+    const keywords = (selectedCase.diagnosisKeywords ?? []).map(normalizeDx)
+
+    const localMatch =
+      normStudent === normCorrect ||
+      normCorrect.includes(normStudent) ||
+      normStudent.includes(normCorrect) ||
+      keywords.some(k => k && (normStudent.includes(k) || k.includes(normStudent)))
+
+    if (localMatch) {
+      setDiagnosisResult(true)
+      setScore(s => s + 20)
+      setIsDiagnosing(false)
+      return
+    }
+
     try {
       const res = await fetch("/api/diagnose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentDiagnosis: diagnosis,
+          studentDiagnosis: value,
           correctDiagnosis: selectedCase.correctDiagnosis,
           diagnosisKeywords: selectedCase.diagnosisKeywords,
         }),
@@ -634,8 +660,31 @@ export default function App() {
             {/* Stage 2: Final diagnosis */}
             {(diagnosisStage === "final" || !c.differentialDiagnosis?.length) && (
               <>
-                {/* Show differential commitment if made */}
-                {differentialPicks.length > 0 && (
+                {/* Differential picks — clickable to auto-submit as final diagnosis */}
+                {differentialPicks.length > 0 && diagnosisResult === null && (
+                  <div className="mb-4">
+                    <p className="text-xs text-stone-400 mb-2">Seçdiyiniz variantdan birini əsas diaqnoz kimi seçin:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {differentialPicks.map(idx => {
+                        const label = c.differentialDiagnosis[idx].diagnosis
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => checkDiagnosis(label)}
+                            disabled={isDiagnosing}
+                            className="px-3 py-1.5 rounded-full text-sm border transition-colors hover:bg-[#EEEFFD] disabled:opacity-50"
+                            style={{ borderColor: "#EEEFFD", background: "#FAFAFD", color: "#5B65DC" }}>
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="border-t border-stone-100 mt-3 mb-3" />
+                  </div>
+                )}
+
+                {/* Static recap after result is shown */}
+                {differentialPicks.length > 0 && diagnosisResult !== null && (
                   <div className="mb-4">
                     <p className="text-xs text-stone-400 mb-1.5">Seçdiyiniz variantlar:</p>
                     <div className="flex flex-wrap gap-1.5">
