@@ -1,4 +1,5 @@
 /* global process */
+import './_loadEnv.js'
 import { createClient } from '@supabase/supabase-js'
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages'

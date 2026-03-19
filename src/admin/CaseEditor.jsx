@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, Plus, X, Save, Globe, ChevronDown, ChevronUp } from "lucide-react"
+import { EMPTY_CASE } from "./caseDefaults.js"
 
 const SPECIALTIES = [
   'Kardiologiya', 'Nevrologiya', 'Pulmonologiya', 'Gastroenterologiya',
@@ -26,32 +27,6 @@ const DIFF_COLOR = {
   Çətin: 'bg-red-100 text-red-700',
 }
 
-const EMPTY_CASE = {
-  title: '',
-  specialty: 'Kardiologiya',
-  difficulty: 'Orta',
-  patient_summary: '',
-  patient_context: '',
-  tags: [],
-  vitals: [
-    { label: 'Təzyiq', value: '' },
-    { label: 'Nabz', value: '' },
-    { label: 'Temp', value: '' },
-    { label: 'SpO2', value: '' },
-  ],
-  history_questions: [],
-  examinations: [],
-  investigations: [],
-  differential_diagnosis: [],
-  correct_diagnosis: '',
-  diagnosis_keywords: [],
-  explanation_points: [],
-  treatment_options: [],
-  treatment_points: [],
-  is_published: false,
-}
-
-export { EMPTY_CASE }
 
 // Reusable field components
 function Field({ label, children }) {
@@ -478,9 +453,17 @@ export default function CaseEditor({ initialCase, session, onBack, onSaved }) {
   const [activeStep, setActiveStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [dirty, setDirty] = useState(false)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
 
   function update(field, value) {
+    setDirty(true)
     setDraft(d => ({ ...d, [field]: value }))
+  }
+
+  function handleBack() {
+    if (dirty) setShowLeaveConfirm(true)
+    else onBack()
   }
 
   async function save(publish) {
@@ -499,6 +482,7 @@ export default function CaseEditor({ initialCase, session, onBack, onSaved }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Xəta baş verdi')
+      setDirty(false)
       onSaved(data.case, publish)
     } catch (err) {
       setSaveError(err.message)
@@ -520,7 +504,7 @@ export default function CaseEditor({ initialCase, session, onBack, onSaved }) {
     <div className="min-h-screen" style={{ background: '#FAFAFD' }}>
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-[#EEEFFD] bg-white px-4 py-3 flex items-center justify-between gap-3">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: '#5B65DC' }}>
+        <button onClick={handleBack} className="flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: '#5B65DC' }}>
           <ArrowLeft size={16} /> Geri
         </button>
 
@@ -619,6 +603,34 @@ export default function CaseEditor({ initialCase, session, onBack, onSaved }) {
           )}
         </div>
       </main>
+
+      {/* Leave confirmation modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 mx-4 max-w-sm w-full">
+            <h2 className="text-base font-semibold mb-2" style={{ color: '#122056' }}>Dəyişikliklər saxlanılmayıb</h2>
+            <p className="text-sm mb-6" style={{ color: '#475467' }}>
+              Geri qayıtsanız bütün redaktə etdiyiniz məlumatlar itirilər. Davam etmək istəyirsiniz?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-[#EEEFFD] hover:bg-[#EEEFFD] transition-colors"
+                style={{ color: '#475467' }}
+              >
+                Ləğv et
+              </button>
+              <button
+                onClick={onBack}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-80"
+                style={{ background: '#DC2626' }}
+              >
+                Saxlamadan çıx
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

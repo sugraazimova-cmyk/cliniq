@@ -5,7 +5,8 @@ import {
   Eye, EyeOff, Pencil, Trash2, Copy, Plus, Loader2,
   TrendingUp, BookOpen, Zap, BarChart2, AlertCircle,
 } from "lucide-react"
-import CaseEditor, { EMPTY_CASE } from "./admin/CaseEditor.jsx"
+import CaseEditor from "./admin/CaseEditor.jsx"
+import { EMPTY_CASE } from "./admin/caseDefaults.js"
 
 const TABS = [
   { id: 'overview', label: 'Ümumi baxış', Icon: LayoutDashboard },

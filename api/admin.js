@@ -1,4 +1,5 @@
 /* global process */
+import './_loadEnv.js'
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -56,8 +57,16 @@ function validateCaseRow(c) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
+  console.log('[admin] env check:', { SUPABASE_URL: !!SUPABASE_URL, SERVICE_ROLE_KEY: !!SERVICE_ROLE_KEY, ADMIN_EMAIL: !!ADMIN_EMAIL })
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ADMIN_EMAIL) {
-    return res.status(500).json({ error: 'Server misconfigured' })
+    return res.status(500).json({
+      error: 'Server misconfigured',
+      missing: [
+        !SUPABASE_URL && 'SUPABASE_URL',
+        !SERVICE_ROLE_KEY && 'SUPABASE_SERVICE_ROLE_KEY',
+        !ADMIN_EMAIL && 'ADMIN_EMAIL',
+      ].filter(Boolean),
+    })
   }
 
   const user = await verifyAdmin(req)
