@@ -5,6 +5,7 @@ import ProfileDrawer from './ProfileDrawer.jsx'
 import FeaturesPage from './FeaturesPage.jsx'
 import CasesPage from './CasesPage.jsx'
 import FlashcardsPage from './FlashcardsPage.jsx'
+import AdminPage from './AdminPage.jsx'
 
 function mapCase(row) {
   return {
@@ -145,6 +146,8 @@ export default function App() {
 
   const [page, setPage] = useState("features")
 
+  const isAdmin = session?.user?.email === import.meta.env.VITE_ADMIN_EMAIL
+
   const [showProfile, setShowProfile] = useState(false)
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set())
 
@@ -274,6 +277,12 @@ export default function App() {
     </div>
   )
 
+  // ── Admin page ───────────────────────────────────────────────────────────
+
+  if (page === "admin" && isAdmin) {
+    return <AdminPage session={session} onBack={() => setPage("features")} />
+  }
+
   // ── Flashcards page ─────────────────────────────────────────────────────
 
   if (page === "flashcards") {
@@ -289,6 +298,7 @@ export default function App() {
           session={session}
           onEnterCases={() => setPage("cases")}
           onEnterFlashcards={() => setPage("flashcards")}
+          onEnterAdmin={isAdmin ? () => setPage("admin") : null}
           setShowProfile={setShowProfile}
         />
         <ProfileDrawer

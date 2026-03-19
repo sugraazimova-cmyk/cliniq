@@ -1,8 +1,8 @@
 import { motion } from "framer-motion"
-import { Layers, Stethoscope, CalendarDays, Timer, BookMarked } from "lucide-react"
+import { Layers, Stethoscope, CalendarDays, Timer, BookMarked, Settings } from "lucide-react"
 import { BentoCard, BentoGrid } from "./components/ui/bento-grid.jsx"
 
-export default function FeaturesPage({ session, onEnterCases, onEnterFlashcards, setShowProfile }) {
+export default function FeaturesPage({ session, onEnterCases, onEnterFlashcards, onEnterAdmin, setShowProfile }) {
   const name = session?.user?.user_metadata?.full_name ?? session?.user?.email ?? ""
   const firstName = name.split(" ")[0]
 
@@ -63,12 +63,23 @@ export default function FeaturesPage({ session, onEnterCases, onEnterFlashcards,
       {/* Header */}
       <header className="border-b border-[#EEEFFD] bg-white px-6 py-4 flex justify-between items-center">
         <span className="text-xl font-bold" style={{ color: "#122056" }}>ClinIQ</span>
-        <button
-          onClick={() => setShowProfile(true)}
-          className="text-sm font-medium transition-colors hover:opacity-70"
-          style={{ color: "#5B65DC" }}>
-          {name}
-        </button>
+        <div className="flex items-center gap-3">
+          {onEnterAdmin && (
+            <button
+              onClick={onEnterAdmin}
+              className="p-1.5 rounded-lg hover:bg-[#EEEFFD] transition-colors"
+              title="Admin Panel"
+              style={{ color: "#5B65DC" }}>
+              <Settings size={18} />
+            </button>
+          )}
+          <button
+            onClick={() => setShowProfile(true)}
+            className="text-sm font-medium transition-colors hover:opacity-70"
+            style={{ color: "#5B65DC" }}>
+            {name}
+          </button>
+        </div>
       </header>
 
       {/* Main */}

@@ -1,5 +1,16 @@
 /* global process */
 
+function logEvent(feature) {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return
+  fetch(`${url}/rest/v1/feature_events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}`, Prefer: 'return=minimal' },
+    body: JSON.stringify({ feature }),
+  }).catch(() => {})
+}
+
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages'
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 1000
@@ -68,6 +79,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Öyrənmə kartları yaradıla bilmədi. Zəhmət olmasa yenidən cəhd edin.' })
       }
     }
+    logEvent('flashcard_generate')
     return res.json({ flashcards })
   } catch (err) {
     console.error('flashcards error:', err)

@@ -1,4 +1,16 @@
 /* global process */
+
+function logEvent(feature) {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return
+  fetch(`${url}/rest/v1/feature_events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: key, Authorization: `Bearer ${key}`, Prefer: 'return=minimal' },
+    body: JSON.stringify({ feature }),
+  }).catch(() => {})
+}
+
 import { createRequire } from 'module'
 import fs from 'fs'
 import os from 'os'
@@ -58,6 +70,7 @@ export default async function handler(req, res) {
     } else {
       return res.status(400).json({ error: 'Yalnız PDF, JPG, PNG, DOCX və TXT fayllar dəstəklənir.' })
     }
+    logEvent('flashcard_parse')
     return res.json(result)
   } catch (err) {
     console.error('flashcards-parse error:', err)
