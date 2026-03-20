@@ -41,8 +41,9 @@ Routing is controlled by state variables in `App.jsx`:
 | [src/FeaturesPage.jsx](src/FeaturesPage.jsx) | Hub page with bento grid of feature cards. Renders gear icon (admin) when `onEnterAdmin` prop is non-null. |
 | [src/CasesPage.jsx](src/CasesPage.jsx) | Two-level cases browser: specialty list → cases within specialty. |
 | [src/ProfileDrawer.jsx](src/ProfileDrawer.jsx) | Slide-in drawer: profile edit, case history, bookmarks, per-case notes. |
-| [src/AdminPage.jsx](src/AdminPage.jsx) | 4-tab admin dashboard: Overview, Hallar, AI Generator, İstifadəçilər. |
-| [src/admin/CaseEditor.jsx](src/admin/CaseEditor.jsx) | 6-step editable case form used in both Cases tab and AI Generator review. Shows unsaved-changes confirmation on back. |
+| [src/AdminPage.jsx](src/AdminPage.jsx) | 5-tab admin dashboard: Overview, Hallar, AI Generator, İstifadəçilər, Rəylər. |
+| [src/admin/CaseEditor.jsx](src/admin/CaseEditor.jsx) | 6-step editable case form used in both Cases tab and AI Generator review. Shows unsaved-changes confirmation on back. Differential items include `diagnosis`, `correct` checkbox, and `explanation` input. |
+| [src/FeedbackModal.jsx](src/FeedbackModal.jsx) | Floating modal for general feedback — 5-star rating + optional comment. Inserts to `feedback` table. |
 | [src/admin/caseDefaults.js](src/admin/caseDefaults.js) | `EMPTY_CASE` template exported separately to keep CaseEditor HMR-compatible. |
 | [src/components/ui/bento-grid.jsx](src/components/ui/bento-grid.jsx) | BentoGrid + BentoCard components used by FeaturesPage. |
 | [src/components/ui/menu.jsx](src/components/ui/menu.jsx) | UserProfileSidebar used inside ProfileDrawer. |
@@ -54,17 +55,19 @@ Routing is controlled by state variables in `App.jsx`:
 Steps are rendered conditionally on `currentStep` (0–5) in `App.jsx`:
 
 1. **Anamnez (0)** — Student picks up to 5 history questions from a list; answers come from stored case data. Tags/points hidden until selected.
-2. **Müayinə (1)** — Interactive patient image with pulsing alert dots; clicking a dot reveals an exam finding.
+2. **Müayinə (1)** — Interactive patient image with pulsing alert dots; clicking a dot reveals an exam finding. No points awarded (findings are informational only).
 3. **Analizlər (2)** — Student orders up to 5 lab investigations from a list.
-4. **Diaqnoz (3)** — Two-stage: pick differential diagnoses (up to 3), then select final diagnosis from clickable chips. Local normalization check determines correct/wrong.
-5. **Müalicə (4)** — Select treatment options from a list; `submitTreatment()` awards 20 pts split across correct options.
-6. **Nəticə (5)** — Score breakdown. Two exit buttons: "Başqa xəstəyə keç" (→ cases list) and "Ana səhifəyə qayıt" (→ features hub).
+4. **Diaqnoz (3)** — Two-stage: (Stage 1) pick differential diagnoses (up to 3) with instant per-item feedback and scoring (+5 correct, −3 wrong, floor 0); (Stage 2) select final diagnosis from clickable chips. Local normalization check determines correct/wrong. Differentials cannot be deselected once picked.
+5. **Müalicə (4)** — Select treatment options from a list. Points awarded immediately on selection (20 pts split equally across correct options). Correct selections show a green `+X xal` badge; wrong selections show red warning style with a note. Live "Qazanılan xal: X / 20" counter shown above the list. Options cannot be deselected once picked.
+6. **Nəticə (5)** — Score breakdown with per-step feedback cards, differential analysis card (✓/✗/⚠/— per entry with legend), and inline feedback prompt. Two exit buttons: "Başqa xəstəyə keç" (→ cases list) and "Ana səhifəyə qayıt" (→ features hub).
 
 Completed step tabs are clickable — student can jump back to any previous step.
 
 ### Case data structure (Supabase `cases` table)
 
 Each case row maps to: `id`, `title`, `specialty`, `difficulty`, `patient_summary`, `tags`, `vitals`, `patient_context`, `history_questions`, `examinations`, `investigations`, `differential_diagnosis`, `correct_diagnosis`, `diagnosis_keywords`, `explanation_points`, `treatment_points`, `treatment_options`.
+
+`differential_diagnosis`: `[{ diagnosis: string, correct: boolean, explanation: string }]` — `correct` marks the clinically appropriate differentials; `explanation` is shown as feedback to the student. Missing `correct` treated as `false`.
 
 `treatment_options`: `[{ text: string, correct: boolean }]` — text before ` — ` shown during selection; full text shown in results.
 
@@ -76,6 +79,7 @@ Each case row maps to: `id`, `title`, `specialty`, `difficulty`, `patient_summar
 | `case_attempts` | Per-user attempt history with score |
 | `bookmarks` | User-bookmarked cases |
 | `notes` | Per-user, per-case text notes |
+| `feedback` | User ratings and comments — `{ user_id, rating (1–5), comment, page, case_id (integer, nullable) }` |
 | `feature_events` | Lightweight usage tracking — one row per event, `feature` column (e.g. `flashcard_generate`, `flashcard_parse`) |
 
 All tables except `feature_events` have RLS policies scoped to `auth.uid() = user_id`.
