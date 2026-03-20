@@ -4,7 +4,7 @@ import {
   ArrowLeft, LayoutDashboard, Folder, Sparkles, Users,
   Eye, EyeOff, Pencil, Trash2, Copy, Plus, Loader2,
   TrendingUp, BookOpen, Zap, BarChart2, AlertCircle,
-  Star, MessageSquare,
+  Star, MessageSquare, Globe,
 } from "lucide-react"
 import { supabase } from './supabase.js'
 import CaseEditor from "./admin/CaseEditor.jsx"
@@ -16,6 +16,7 @@ const TABS = [
   { id: 'generator', label: 'AI Generator',   Icon: Sparkles },
   { id: 'users',     label: 'İstifadəçilər',  Icon: Users },
   { id: 'feedback',  label: 'Rəylər',         Icon: MessageSquare },
+  { id: 'landing',   label: 'Səhifə',         Icon: Globe },
 ]
 
 const SPECIALTIES = [
@@ -492,6 +493,77 @@ function ErrorMsg({ msg }) {
   )
 }
 
+// ─── Landing tab ───────────────────────────────────────────────────────────
+const LANDING_FIELDS = [
+  { key: 'hero_headline',  label: 'Hero başlıq',  rows: 1 },
+  { key: 'hero_subheading', label: 'Hero alt başlıq', rows: 2 },
+  { key: 'problem_body',   label: 'Problem mətni', rows: 3 },
+  { key: 'cta_headline',   label: 'CTA başlıq',   rows: 1 },
+  { key: 'cta_subtext',    label: 'CTA alt mətn',  rows: 1 },
+  { key: 'quote_text',     label: 'Sitat',         rows: 2 },
+]
+
+function LandingTab() {
+  const [form, setForm] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.from('landing_content').select('*').eq('id', 1).single()
+      .then(({ data }) => { if (data) setForm(data) })
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleSave() {
+    setSaving(true)
+    await supabase.from('landing_content').upsert({ ...form, id: 1, updated_at: new Date().toISOString() })
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
+  if (loading) return <div className="py-12 text-center text-stone-400 text-sm"><Loader2 size={20} className="animate-spin mx-auto" /></div>
+
+  return (
+    <div className="max-w-2xl space-y-5">
+      <h2 className="text-lg font-semibold" style={{ color: '#122056' }}>Açılış səhifəsi məzmunu</h2>
+      {LANDING_FIELDS.map(({ key, label, rows }) => (
+        <div key={key}>
+          <label className="block text-sm font-medium text-stone-600 mb-1">{label}</label>
+          {rows === 1 ? (
+            <input
+              type="text"
+              value={form[key] || ''}
+              onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+              className="w-full border border-[#EEEFFD] rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#5B65DC]/30"
+            />
+          ) : (
+            <textarea
+              rows={rows}
+              value={form[key] || ''}
+              onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+              className="w-full border border-[#EEEFFD] rounded-lg px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#5B65DC]/30 resize-none"
+            />
+          )}
+        </div>
+      ))}
+      <div className="flex items-center gap-4 pt-2">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+          style={{ background: '#5B65DC' }}
+        >
+          {saving && <Loader2 size={14} className="animate-spin" />}
+          Yadda saxla
+        </button>
+        {saved && <span className="text-sm font-medium text-emerald-600">Dəyişikliklər saxlanıldı ✓</span>}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main AdminPage ────────────────────────────────────────────────────────
 export default function AdminPage({ session, onBack }) {
   const [activeTab, setActiveTab] = useState('overview')
@@ -560,6 +632,7 @@ export default function AdminPage({ session, onBack }) {
             {activeTab === 'generator' && <AiGenerator session={session} onEdit={handleEdit} />}
             {activeTab === 'users'     && <UsersTab session={session} />}
             {activeTab === 'feedback'  && <FeedbackTab session={session} />}
+            {activeTab === 'landing'   && <LandingTab />}
           </motion.div>
         </AnimatePresence>
       </main>

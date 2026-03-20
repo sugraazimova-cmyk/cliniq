@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { MessageSquare, Star, Home } from "lucide-react"
 import { supabase } from './supabase.js'
-import AuthScreen from './AuthScreen.jsx'
+import LandingPage from './LandingPage.jsx'
 import ProfileDrawer from './ProfileDrawer.jsx'
 import FeaturesPage from './FeaturesPage.jsx'
 import CasesPage from './CasesPage.jsx'
@@ -78,7 +78,6 @@ const STEPS = ["Anamnez", "Müayinə", "Analizlər", "Diaqnoz", "Müalicə", "N�
 
 export default function App() {
   const [session, setSession] = useState(undefined)
-
   useEffect(() => {
     const stored = localStorage.getItem('sb-remember')
     if (stored) {
@@ -285,7 +284,7 @@ export default function App() {
     </div>
   )
 
-  if (!session) return <AuthScreen />
+  if (!session) return <LandingPage />
 
   if (loading) return (
     <div className="min-h-screen bg-stone-100 flex items-center justify-center">
