@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { MessageSquare, Star } from "lucide-react"
+import { MessageSquare, Star, Home } from "lucide-react"
 import { supabase } from './supabase.js'
 import AuthScreen from './AuthScreen.jsx'
 import ProfileDrawer from './ProfileDrawer.jsx'
@@ -364,7 +364,16 @@ export default function App() {
 
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <span className="text-xl font-medium text-indigo-700">ClinIQ</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { resetAll(); setPage("features") }}
+              className="text-stone-400 hover:text-indigo-600 transition-colors"
+              title="Ana səhifə"
+            >
+              <Home size={18} />
+            </button>
+            <span className="text-xl font-medium text-indigo-700">ClinIQ</span>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">
               {score} xal

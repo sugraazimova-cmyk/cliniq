@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
   Stethoscope, Heart, Brain, Bug, Wind, Baby,
   Zap, Droplets, MessageCircle, Scissors, Utensils,
-  ArrowRight, ChevronLeft,
+  ArrowRight, ChevronLeft, Home,
 } from "lucide-react"
 import { supabase } from './supabase.js'
 
@@ -73,6 +73,13 @@ export default function CasesPage({
             style={{ color: "#5B65DC" }}>
             <ChevronLeft className="h-4 w-4" />
             {selectedSpecialty ? selectedSpecialty : "Geri"}
+          </button>
+          <button
+            onClick={onBack}
+            className="text-stone-400 hover:text-[#5B65DC] transition-colors"
+            title="Ana səhifə"
+          >
+            <Home size={18} />
           </button>
           <span className="text-xl font-bold" style={{ color: "#122056" }}>ClinIQ</span>
         </div>
