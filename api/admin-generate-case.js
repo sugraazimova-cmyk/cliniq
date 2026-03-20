@@ -8,7 +8,7 @@ const MODEL = 'claude-sonnet-4-6'
 const VALID_SPECIALTIES = [
   'Kardiologiya', 'Nevrologiya', 'Pulmonologiya', 'Gastroenterologiya',
   'Endokrinologiya', 'Nefrologiya', 'Ortopediya', 'Pediatriya',
-  'Cərrahiyyə', 'Ginekologiya', 'Psixiatriya', 'Dərmatologiya', 'Digər',
+  'İnfeksion xəstəliklər', 'Cərrahiyyə', 'Ginekologiya', 'Psixiatriya', 'Dərmatologiya', 'Digər',
 ]
 const VALID_DIFFICULTIES = ['Asan', 'Orta', 'Çətin']
 
@@ -34,7 +34,7 @@ Return ONLY a valid JSON object with these exact fields — no markdown, no back
 
 {
   "title": "descriptive case title in Azerbaijani",
-  "specialty": "one of: Kardiologiya | Nevrologiya | Pulmonologiya | Gastroenterologiya | Endokrinologiya | Nefrologiya | Ortopediya | Pediatriya | Cərrahiyyə | Ginekologiya | Psixiatriya | Dərmatologiya | Digər",
+  "specialty": "one of: Kardiologiya | Nevrologiya | Pulmonologiya | Gastroenterologiya | Endokrinologiya | Nefrologiya | Ortopediya | Pediatriya | İnfeksion xəstəliklər | Cərrahiyyə | Ginekologiya | Psixiatriya | Dərmatologiya | Digər",
   "difficulty": "one of: Asan | Orta | Çətin",
   "patient_summary": "one sentence patient presentation in Azerbaijani",
   "patient_context": "2-3 sentences of patient background in Azerbaijani",

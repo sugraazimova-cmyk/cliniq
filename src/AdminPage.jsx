@@ -4,21 +4,24 @@ import {
   ArrowLeft, LayoutDashboard, Folder, Sparkles, Users,
   Eye, EyeOff, Pencil, Trash2, Copy, Plus, Loader2,
   TrendingUp, BookOpen, Zap, BarChart2, AlertCircle,
+  Star, MessageSquare,
 } from "lucide-react"
+import { supabase } from './supabase.js'
 import CaseEditor from "./admin/CaseEditor.jsx"
 import { EMPTY_CASE } from "./admin/caseDefaults.js"
 
 const TABS = [
-  { id: 'overview', label: 'Ümumi baxış', Icon: LayoutDashboard },
-  { id: 'cases',    label: 'Hallar',       Icon: Folder },
-  { id: 'generator',label: 'AI Generator', Icon: Sparkles },
-  { id: 'users',    label: 'İstifadəçilər', Icon: Users },
+  { id: 'overview',  label: 'Ümumi baxış',   Icon: LayoutDashboard },
+  { id: 'cases',     label: 'Hallar',         Icon: Folder },
+  { id: 'generator', label: 'AI Generator',   Icon: Sparkles },
+  { id: 'users',     label: 'İstifadəçilər',  Icon: Users },
+  { id: 'feedback',  label: 'Rəylər',         Icon: MessageSquare },
 ]
 
 const SPECIALTIES = [
   'Kardiologiya', 'Nevrologiya', 'Pulmonologiya', 'Gastroenterologiya',
   'Endokrinologiya', 'Nefrologiya', 'Ortopediya', 'Pediatriya',
-  'Cərrahiyyə', 'Ginekologiya', 'Psixiatriya', 'Dərmatologiya', 'Digər',
+  'İnfeksion xəstəliklər', 'Cərrahiyyə', 'Ginekologiya', 'Psixiatriya', 'Dərmatologiya', 'Digər',
 ]
 
 const DIFF_COLOR = {
@@ -378,6 +381,100 @@ function UsersTab({ session }) {
   )
 }
 
+// ─── Feedback tab ──────────────────────────────────────────────────────────
+function FeedbackTab({ session }) {
+  const [rows, setRows] = useState([])
+  const [userMap, setUserMap] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from('feedback').select('*').order('created_at', { ascending: false }),
+      adminCall('users', {}, session.access_token),
+    ])
+      .then(([{ data, error: err }, usersData]) => {
+        if (err) throw new Error(err.message)
+        setRows(data ?? [])
+        const map = {}
+        for (const u of usersData.users ?? []) map[u.id] = u.email
+        setUserMap(map)
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [session])
+
+  if (loading) return <Spinner />
+  if (error) return <ErrorMsg msg={error} />
+
+  if (rows.length === 0) return (
+    <p className="text-sm text-stone-400 py-8 text-center">Hələ rəy yoxdur</p>
+  )
+
+  function Stars({ rating }) {
+    return (
+      <span className="flex gap-0.5">
+        {[1,2,3,4,5].map(i => (
+          <Star
+            key={i}
+            size={14}
+            fill={i <= rating ? '#F59E0B' : 'none'}
+            stroke={i <= rating ? '#F59E0B' : '#D1D5DB'}
+            strokeWidth={1.5}
+          />
+        ))}
+      </span>
+    )
+  }
+
+  function userId(id) {
+    return userMap[id] || `${id.slice(0, 8)}…`
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-[#EEEFFD]">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-[#EEEFFD] bg-[#FAFAFD]">
+            {['Tarix', 'Reytinq', 'Şərh', 'Səhifə', 'İstifadəçi'].map(h => (
+              <th key={h} className="text-left px-4 py-3 text-xs font-medium text-stone-400 uppercase tracking-wide whitespace-nowrap">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#EEEFFD]">
+          {rows.map(r => (
+            <tr key={r.id} className="bg-white hover:bg-[#FAFAFD] transition-colors">
+              <td className="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">
+                {new Date(r.created_at).toLocaleDateString('az-AZ', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </td>
+              <td className="px-4 py-3">
+                <Stars rating={r.rating} />
+              </td>
+              <td className="px-4 py-3 text-stone-600 max-w-xs">
+                {r.comment ? (
+                  <span className="line-clamp-2">{r.comment}</span>
+                ) : (
+                  <span className="text-stone-300">—</span>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                <span className="text-xs bg-[#EEEFFD] text-[#5B65DC] px-2 py-0.5 rounded-full whitespace-nowrap">
+                  {r.page ?? '—'}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-xs text-stone-500 whitespace-nowrap font-mono">
+                {r.user_id ? userId(r.user_id) : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ─── Shared helpers ────────────────────────────────────────────────────────
 function Spinner() {
   return (
@@ -462,6 +559,7 @@ export default function AdminPage({ session, onBack }) {
             {activeTab === 'cases'     && <CaseList session={session} onEdit={handleEdit} />}
             {activeTab === 'generator' && <AiGenerator session={session} onEdit={handleEdit} />}
             {activeTab === 'users'     && <UsersTab session={session} />}
+            {activeTab === 'feedback'  && <FeedbackTab session={session} />}
           </motion.div>
         </AnimatePresence>
       </main>

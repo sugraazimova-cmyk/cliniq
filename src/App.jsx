@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { MessageSquare, Star } from "lucide-react"
 import { supabase } from './supabase.js'
 import AuthScreen from './AuthScreen.jsx'
 import ProfileDrawer from './ProfileDrawer.jsx'
@@ -6,6 +7,7 @@ import FeaturesPage from './FeaturesPage.jsx'
 import CasesPage from './CasesPage.jsx'
 import FlashcardsPage from './FlashcardsPage.jsx'
 import AdminPage from './AdminPage.jsx'
+import FeedbackModal from './FeedbackModal.jsx'
 
 function mapCase(row) {
   return {
@@ -149,13 +151,19 @@ export default function App() {
   const isAdmin = session?.user?.email === import.meta.env.VITE_ADMIN_EMAIL
 
   const [showProfile, setShowProfile] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [inlineRating, setInlineRating] = useState(0)
+  const [inlineHovered, setInlineHovered] = useState(0)
+  const [inlineComment, setInlineComment] = useState('')
+  const [inlineSubmitted, setInlineSubmitted] = useState(false)
+  const [inlineSubmitting, setInlineSubmitting] = useState(false)
   const [bookmarkedIds, setBookmarkedIds] = useState(new Set())
 
   // Load bookmarks once session is ready
   useEffect(() => {
     if (!session) return
     supabase.from('bookmarks').select('case_id').then(({ data }) => {
-      if (data) setBookmarkedIds(new Set(data.map(r => r.case_id)))
+      if (data) setBookmarkedIds(new Set(data.map(r => String(r.case_id))))
     })
   }, [session])
 
@@ -253,6 +261,11 @@ export default function App() {
     setSelectedTreatments([])
     setTreatment("")
     setScore(0)
+    setInlineRating(0)
+    setInlineHovered(0)
+    setInlineComment('')
+    setInlineSubmitted(false)
+    setInlineSubmitting(false)
   }
 
   // ── Auth / loading gates ────────────────────────────────────────────────
@@ -308,7 +321,7 @@ export default function App() {
           cases={cases}
           bookmarkedIds={bookmarkedIds}
           setBookmarkedIds={setBookmarkedIds}
-          onSelectCase={(id) => { setSelectedCase(cases.find(x => x.id === id) ?? null); setPage("cases"); setShowProfile(false) }}
+          onSelectCase={(id) => { setSelectedCase(cases.find(x => String(x.id) === String(id)) ?? null); setPage("cases"); setShowProfile(false) }}
         />
       </>
     )
@@ -335,7 +348,7 @@ export default function App() {
           cases={cases}
           bookmarkedIds={bookmarkedIds}
           setBookmarkedIds={setBookmarkedIds}
-          onSelectCase={(id) => { setSelectedCase(cases.find(x => x.id === id) ?? null); setShowProfile(false) }}
+          onSelectCase={(id) => { setSelectedCase(cases.find(x => String(x.id) === String(id)) ?? null); setShowProfile(false) }}
         />
       </>
     )
@@ -922,6 +935,66 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Inline feedback card */}
+              <div className="rounded-xl p-4 mb-3 border" style={{ background: '#EEEFFD', borderColor: 'rgba(91,101,220,0.3)' }}>
+                {inlineSubmitted ? (
+                  <p className="text-sm text-emerald-600 font-medium text-center">Rəyiniz üçün təşəkkür edirik ✓</p>
+                ) : (
+                  <>
+                    <p className="text-xs text-stone-500 mb-3">Bu hal necə idi?</p>
+                    <div className="flex gap-1.5 mb-3">
+                      {[1,2,3,4,5].map(i => {
+                        const active = inlineHovered || inlineRating
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => setInlineRating(i)}
+                            onMouseEnter={() => setInlineHovered(i)}
+                            onMouseLeave={() => setInlineHovered(0)}
+                            className="transition-transform hover:scale-110 active:scale-95"
+                          >
+                            <Star
+                              size={24}
+                              fill={i <= active ? '#F59E0B' : 'none'}
+                              stroke={i <= active ? '#F59E0B' : '#9CA3AF'}
+                              strokeWidth={1.5}
+                            />
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <input
+                      type="text"
+                      value={inlineComment}
+                      onChange={e => setInlineComment(e.target.value)}
+                      placeholder="Şərhinizi yazın... (istəyə bağlı)"
+                      className="w-full rounded-lg border bg-white px-3 py-2 text-sm text-stone-700 outline-none mb-3"
+                      style={{ borderColor: 'rgba(91,101,220,0.3)' }}
+                    />
+                    <button
+                      disabled={!inlineRating || inlineSubmitting}
+                      onClick={async () => {
+                        if (!inlineRating) return
+                        setInlineSubmitting(true)
+                        await supabase.from('feedback').insert({
+                          user_id: session.user.id,
+                          rating: inlineRating,
+                          comment: inlineComment.trim() || null,
+                          page: 'case_result',
+                          case_id: selectedCase?.id ?? null,
+                        })
+                        setInlineSubmitting(false)
+                        setInlineSubmitted(true)
+                      }}
+                      className="w-full rounded-lg py-2 text-sm font-medium text-white transition-colors disabled:opacity-40"
+                      style={{ background: '#5B65DC' }}
+                    >
+                      {inlineSubmitting ? '...' : 'Göndər'}
+                    </button>
+                  </>
+                )}
+              </div>
+
               <button onClick={() => { resetAll(); setPage("cases") }}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl text-sm transition-colors">
                 Başqa xəstəyə keç →
@@ -961,8 +1034,27 @@ export default function App() {
         cases={cases}
         bookmarkedIds={bookmarkedIds}
         setBookmarkedIds={setBookmarkedIds}
-        onSelectCase={(id) => { setSelectedCase(cases.find(x => x.id === id) ?? null); setShowProfile(false) }}
+        onSelectCase={(id) => { setSelectedCase(cases.find(x => String(x.id) === String(id)) ?? null); setPage('cases'); setShowProfile(false) }}
       />
+
+      {/* Floating feedback button */}
+      <button
+        onClick={() => setShowFeedback(true)}
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
+        style={{ background: '#5B65DC' }}
+        title="Rəy bildirin"
+      >
+        <MessageSquare size={20} color="white" />
+      </button>
+
+      {showFeedback && (
+        <FeedbackModal
+          page={page}
+          caseId={selectedCase?.id ?? null}
+          session={session}
+          onClose={() => setShowFeedback(false)}
+        />
+      )}
     </div>
   )
 }

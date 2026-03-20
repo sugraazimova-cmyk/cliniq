@@ -1,4 +1,5 @@
 /* global process */
+import './_loadEnv.js'
 
 function logEvent(feature) {
   const url = process.env.SUPABASE_URL
@@ -13,10 +14,12 @@ function logEvent(feature) {
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages'
 const MODEL = 'claude-haiku-4-5-20251001'
-const MAX_TOKENS = 1000
+const MAX_TOKENS = 2000
 const MAX_WORDS = 3000
 
 const SYSTEM_PROMPT = `You are a medical education assistant. When given clinical text or an image of medical content, generate exactly 8 high-quality flashcards for medical students and doctors.
+
+IMPORTANT: Generate ALL questions and answers in Azerbaijani language.
 
 Rules:
 - Each flashcard must have a clear, specific QUESTION and a concise ANSWER
@@ -69,12 +72,12 @@ export default async function handler(req, res) {
     let raw = await callClaude(apiKey, messages)
     let flashcards
     try {
-      flashcards = JSON.parse(raw)
+      flashcards = parseFlashcards(raw)
     } catch {
       // Retry once
       raw = await callClaude(apiKey, messages)
       try {
-        flashcards = JSON.parse(raw)
+        flashcards = parseFlashcards(raw)
       } catch {
         return res.status(500).json({ error: 'Öyrənmə kartları yaradıla bilmədi. Zəhmət olmasa yenidən cəhd edin.' })
       }
@@ -83,8 +86,19 @@ export default async function handler(req, res) {
     return res.json({ flashcards })
   } catch (err) {
     console.error('flashcards error:', err)
-    return res.status(500).json({ error: 'Öyrənmə kartları yaradıla bilmədi. Zəhmət olmasa yenidən cəhd edin.' })
+    return res.status(500).json({ error: 'Öyrənmə kartları yaradıla bilmədi. Zəhmət olmasa yenidən cəhd edin.', detail: err.message })
   }
+}
+
+function parseFlashcards(raw) {
+  // Strip markdown code fences if model ignores instructions
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+  const parsed = JSON.parse(cleaned)
+  // Normalize front/back → question/answer
+  return parsed.map(c => ({
+    question: c.question ?? c.front ?? '',
+    answer: c.answer ?? c.back ?? '',
+  }))
 }
 
 async function callClaude(apiKey, messages) {

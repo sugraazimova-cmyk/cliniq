@@ -9,7 +9,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL
 const VALID_SPECIALTIES = [
   'Kardiologiya', 'Nevrologiya', 'Pulmonologiya', 'Gastroenterologiya',
   'Endokrinologiya', 'Nefrologiya', 'Ortopediya', 'Pediatriya',
-  'Cərrahiyyə', 'Ginekologiya', 'Psixiatriya', 'Dərmatologiya', 'Digər',
+  'İnfeksion xəstəliklər', 'Cərrahiyyə', 'Ginekologiya', 'Psixiatriya', 'Dərmatologiya', 'Digər',
 ]
 const VALID_DIFFICULTIES = ['Asan', 'Orta', 'Çətin']
 

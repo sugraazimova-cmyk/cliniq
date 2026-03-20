@@ -6,7 +6,7 @@ import { EMPTY_CASE } from "./caseDefaults.js"
 const SPECIALTIES = [
   'Kardiologiya', 'Nevrologiya', 'Pulmonologiya', 'Gastroenterologiya',
   'Endokrinologiya', 'Nefrologiya', 'Ortopediya', 'Pediatriya',
-  'Cərrahiyyə', 'Ginekologiya', 'Psixiatriya', 'Dərmatologiya', 'Digər',
+  'İnfeksion xəstəliklər', 'Cərrahiyyə', 'Ginekologiya', 'Psixiatriya', 'Dərmatologiya', 'Digər',
 ]
 const DIFFICULTIES = ['Asan', 'Orta', 'Çətin']
 const BODY_SYSTEMS = [

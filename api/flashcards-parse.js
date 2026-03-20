@@ -1,4 +1,5 @@
 /* global process */
+import './_loadEnv.js'
 
 function logEvent(feature) {
   const url = process.env.SUPABASE_URL
@@ -28,7 +29,7 @@ export default async function handler(req, res) {
   const form = formidable({
     uploadDir: os.tmpdir(),
     keepExtensions: true,
-    maxFileSize: 20 * 1024 * 1024,
+    maxFileSize: 50 * 1024 * 1024,
   })
 
   let uploadedFile

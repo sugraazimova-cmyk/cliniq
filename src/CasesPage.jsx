@@ -52,13 +52,13 @@ export default function CasesPage({
 
   function toggleBookmark(e, c) {
     e.stopPropagation()
-    const isBookmarked = bookmarkedIds.has(c.id)
+    const isBookmarked = bookmarkedIds.has(String(c.id))
     if (isBookmarked) {
       supabase.from('bookmarks').delete().match({ user_id: session.user.id, case_id: c.id }).then(() => {})
-      setBookmarkedIds(prev => { const s = new Set(prev); s.delete(c.id); return s })
+      setBookmarkedIds(prev => { const s = new Set(prev); s.delete(String(c.id)); return s })
     } else {
       supabase.from('bookmarks').insert({ user_id: session.user.id, case_id: c.id, case_title: c.title ?? `Hal ${c.id}` }).then(() => {})
-      setBookmarkedIds(prev => new Set([...prev, c.id]))
+      setBookmarkedIds(prev => new Set([...prev, String(c.id)]))
     }
   }
 
@@ -162,7 +162,7 @@ export default function CasesPage({
               <div className="bg-white rounded-2xl overflow-hidden [box-shadow:0_0_0_1px_rgba(18,32,86,.06),0_2px_4px_rgba(18,32,86,.05),0_12px_24px_rgba(18,32,86,.05)]">
                 <Sep />
                 {(grouped[selectedSpecialty] ?? []).map(c => {
-                  const isBookmarked = bookmarkedIds.has(c.id)
+                  const isBookmarked = bookmarkedIds.has(String(c.id))
                   return (
                     <div key={c.id}>
                       <div className="grid items-center gap-4 px-6 py-5 md:grid-cols-4 hover:bg-[#FAFAFD] transition-colors">
