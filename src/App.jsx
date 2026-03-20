@@ -136,6 +136,9 @@ export default function App() {
 
   // Diagnosis
   const [differentialPicks, setDifferentialPicks] = useState([])
+  const [differentialScore, setDifferentialScore] = useState(0)
+  const [differentialFeedback, setDifferentialFeedback] = useState(null)
+  const [showDiffLegend, setShowDiffLegend] = useState(false)
   const [diagnosisStage, setDiagnosisStage] = useState("differential")
   const [diagnosis, setDiagnosis] = useState("")
   const [diagnosisResult, setDiagnosisResult] = useState(null)
@@ -189,7 +192,6 @@ export default function App() {
   function toggleExam(idx) {
     if (selectedExams.includes(idx)) return
     setSelectedExams(prev => [...prev, idx])
-    if (selectedCase.examinations[idx].relevant) setScore(s => s + 8)
   }
 
   function toggleTest(idx) {
@@ -202,12 +204,20 @@ export default function App() {
   }
 
   function toggleDifferential(idx) {
-    if (differentialPicks.includes(idx)) {
-      setDifferentialPicks(prev => prev.filter(i => i !== idx))
-      return
-    }
+    if (differentialPicks.includes(idx)) return
     if (differentialPicks.length >= MAX_DIFFERENTIAL_PICKS) return
     setDifferentialPicks(prev => [...prev, idx])
+    const isCorrect = selectedCase.differentialDiagnosis[idx]?.correct === true
+    const delta = isCorrect ? 5 : -3
+    setScore(s => Math.max(0, s + delta))
+    setDifferentialScore(s => s + delta)
+    if (isCorrect) {
+      const explanation = selectedCase.differentialDiagnosis[idx]?.explanation ?? ""
+      const firstSentence = (explanation.split(".")[0] ?? "").trim() + "."
+      setDifferentialFeedback({ type: "correct", text: firstSentence, index: idx })
+    } else {
+      setDifferentialFeedback({ type: "wrong", text: "Bu diferensial bu xəstənin klinik mənzərəsi ilə tam uyğun gəlmir", index: idx })
+    }
   }
 
   function normalizeDx(s) {
@@ -232,18 +242,15 @@ export default function App() {
   }
 
   function toggleTreatment(idx) {
-    setSelectedTreatments(prev =>
-      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
-    )
-  }
-
-  function submitTreatment() {
+    if (selectedTreatments.includes(idx)) return
+    setSelectedTreatments(prev => [...prev, idx])
     const opts = selectedCase.treatmentOptions
     const correctCount = opts.filter(o => o.correct).length
     const pointsEach = correctCount > 0 ? Math.round(20 / correctCount) : 0
-    const earned = selectedTreatments.reduce((sum, i) =>
-      sum + (opts[i].correct ? pointsEach : 0), 0)
-    setScore(s => s + earned)
+    if (opts[idx].correct) setScore(s => Math.max(0, s + pointsEach))
+  }
+
+  function submitTreatment() {
     setCurrentStep(5)
   }
 
@@ -255,6 +262,8 @@ export default function App() {
     setSelectedExams([])
     setSelectedTests([])
     setDifferentialPicks([])
+    setDifferentialScore(0)
+    setDifferentialFeedback(null)
     setDiagnosisStage("differential")
     setDiagnosis("")
     setDiagnosisResult(null)
@@ -647,25 +656,35 @@ export default function App() {
                   {c.differentialDiagnosis.map((item, idx) => {
                     const picked = differentialPicks.includes(idx)
                     const capped = !picked && differentialPicks.length >= MAX_DIFFERENTIAL_PICKS
+                    const fb = differentialFeedback?.index === idx ? differentialFeedback : null
                     return (
-                      <button
-                        key={idx}
-                        onClick={() => toggleDifferential(idx)}
-                        disabled={capped}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
-                          ${picked ? "bg-indigo-50 border-indigo-200 text-indigo-900" :
-                            capped ? "bg-stone-50 border-stone-200 text-stone-400 opacity-50 cursor-not-allowed" :
-                            "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
-                        <div className="flex justify-between items-center">
-                          <span>{item.diagnosis}</span>
-                          {picked && <span className="text-indigo-500 text-sm">✓</span>}
-                        </div>
-                      </button>
+                      <div key={idx}>
+                        <button
+                          onClick={() => toggleDifferential(idx)}
+                          disabled={capped || picked}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
+                            ${picked ? "bg-indigo-50 border-indigo-200 text-indigo-900 cursor-default" :
+                              capped ? "bg-stone-50 border-stone-200 text-stone-400 opacity-50 cursor-not-allowed" :
+                              "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
+                          <div className="flex justify-between items-center">
+                            <span>{item.diagnosis}</span>
+                            {picked && <span className="text-indigo-500 text-sm">✓</span>}
+                          </div>
+                        </button>
+                        {fb && (
+                          <div className={`mt-1 px-3 py-2 rounded-lg border text-xs
+                            ${fb.type === "correct"
+                              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                              : "bg-red-50 border-red-200 text-red-700"}`}>
+                            {fb.text}
+                          </div>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
                 <button
-                  onClick={() => setDiagnosisStage("final")}
+                  onClick={() => { setDiagnosisStage("final"); setDifferentialFeedback(null) }}
                   disabled={differentialPicks.length === 0}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-stone-300 text-white font-medium py-2 rounded-xl text-sm transition-colors">
                   Diaqnozu müəyyənləşdir →
@@ -744,21 +763,39 @@ export default function App() {
             {c.treatmentOptions?.length > 0 ? (
               <>
                 <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-1">Müalicə planı</p>
-                <p className="text-xs text-stone-400 mb-3">Düzgün hesab etdiyiniz müalicə tədbirlərini seçin</p>
+                <p className="text-xs text-stone-400 mb-2">Düzgün hesab etdiyiniz müalicə tədbirlərini seçin</p>
+                {(() => {
+                  const correctCount = c.treatmentOptions.filter(o => o.correct).length
+                  const pointsEach = correctCount > 0 ? Math.round(20 / correctCount) : 0
+                  const earned = selectedTreatments.filter(i => c.treatmentOptions[i].correct).length * pointsEach
+                  return (
+                    <p className="text-sm font-medium text-indigo-700 mb-3">Qazanılan xal: {earned} / 20</p>
+                  )
+                })()}
                 <div className="flex flex-col gap-2">
                   {c.treatmentOptions.map((opt, idx) => {
                     const selected = selectedTreatments.includes(idx)
+                    const correctCount = c.treatmentOptions.filter(o => o.correct).length
+                    const pointsEach = correctCount > 0 ? Math.round(20 / correctCount) : 0
                     return (
                       <button
                         key={idx}
                         onClick={() => toggleTreatment(idx)}
+                        disabled={selected}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm border transition-colors
-                          ${selected ? "bg-indigo-50 border-indigo-200 text-indigo-900"
+                          ${selected && opt.correct ? "bg-indigo-50 border-indigo-200 text-indigo-900 cursor-default"
+                            : selected && !opt.correct ? "bg-red-50 border-red-300 text-red-800 cursor-default"
                             : "bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100"}`}>
                         <div className="flex justify-between items-center gap-2">
                           <span className="flex-1">{opt.text.split(' — ')[0]}</span>
-                          {selected && <span className="text-indigo-500 shrink-0">✓</span>}
+                          {selected && opt.correct && (
+                            <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">+{pointsEach} xal</span>
+                          )}
+                          {selected && !opt.correct && <span className="text-red-500 shrink-0">✗</span>}
                         </div>
+                        {selected && !opt.correct && (
+                          <p className="text-xs text-red-500 mt-1">Bu müalicə bu xəstə üçün uyğun deyil!</p>
+                        )}
                       </button>
                     )
                   })}
@@ -781,7 +818,6 @@ export default function App() {
 
         {/* ── Step 5: Results ───────────────────────────────────────────── */}
         {currentStep === 5 && (() => {
-          // Treatment score already added by submitTreatment
           const totalScore = score
 
           return (
@@ -856,9 +892,6 @@ export default function App() {
                       return (
                         <div key={idx} className="flex justify-between items-start gap-2 text-xs px-2 py-1.5 bg-stone-50 rounded-lg">
                           <span className="text-stone-700 flex-1">{ex.finding}</span>
-                          <span className={`font-medium shrink-0 ${ex.relevant ? "text-emerald-600" : "text-stone-400"}`}>
-                            {ex.relevant ? "+8 xal" : "0 xal"}
-                          </span>
                         </div>
                       )
                     })}
@@ -895,6 +928,76 @@ export default function App() {
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Differential diagnosis analysis */}
+              {c.differentialDiagnosis?.length > 0 && (
+                <div className="bg-white border border-stone-200 rounded-xl p-4 mb-3" onClick={() => setShowDiffLegend(false)}>
+                  <div className="flex justify-between items-center mb-3 relative">
+                    <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">Diferensial diaqnoz analizi</p>
+                    <div className="relative">
+                      <button
+                        onClick={e => { e.stopPropagation(); setShowDiffLegend(v => !v) }}
+                        className="text-xs text-stone-400 hover:text-stone-600 w-5 h-5 rounded-full border border-stone-200 flex items-center justify-center">
+                        ⓘ
+                      </button>
+                      {showDiffLegend && (
+                        <div className="absolute top-7 right-0 z-10 bg-white border border-stone-200 rounded-xl shadow-md p-3 w-48" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-2 text-xs py-1"><span className="font-bold text-emerald-700">✓</span><span className="text-emerald-700">Düzgün seçdiniz</span></div>
+                          <div className="flex items-center gap-2 text-xs py-1"><span className="font-bold text-red-600">✗</span><span className="text-red-600">Yanlış seçdiniz</span></div>
+                          <div className="flex items-center gap-2 text-xs py-1"><span className="font-bold text-amber-700">⚠</span><span className="text-amber-700">Seçilməli idi</span></div>
+                          <div className="flex items-center gap-2 text-xs py-1"><span className="font-bold text-stone-400">—</span><span className="text-stone-400">Düzgün atladınız</span></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {c.differentialDiagnosis.map((item, idx) => {
+                      const selected = differentialPicks.includes(idx)
+                      const isCorrect = item.correct === true
+                      const isCorrectSelected   = isCorrect && selected
+                      const isWrongSelected     = !isCorrect && selected
+                      const isMissed            = isCorrect && !selected
+                      const isCorrectlyIgnored  = !isCorrect && !selected
+                      return (
+                        <div key={idx} className={`flex items-start gap-2 text-xs px-2 py-1.5 rounded-lg
+                          ${isCorrectlyIgnored ? "bg-stone-50" : isCorrectSelected ? "bg-emerald-50" : isMissed ? "bg-amber-50" : "bg-red-50"}`}>
+                          {isCorrectlyIgnored ? (
+                            <span className="font-bold shrink-0 mt-0.5 text-stone-300">—</span>
+                          ) : isCorrectSelected ? (
+                            <span className="font-bold shrink-0 mt-0.5 text-emerald-600">✓</span>
+                          ) : isWrongSelected ? (
+                            <span className="font-bold shrink-0 mt-0.5 text-red-500">✗</span>
+                          ) : (
+                            <span className="font-bold shrink-0 mt-0.5 text-amber-500">⚠</span>
+                          )}
+                          <div>
+                            {isCorrectlyIgnored ? (
+                              <p className="text-stone-300 text-sm">{item.diagnosis}</p>
+                            ) : isMissed ? (
+                              <p className="font-medium text-amber-800">
+                                {item.diagnosis}
+                                <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Seçilməli idi</span>
+                              </p>
+                            ) : (
+                              <p className={`font-medium ${isCorrectSelected ? "text-emerald-800" : "text-red-700"}`}>{item.diagnosis}</p>
+                            )}
+                            {item.explanation && !isCorrectlyIgnored && (
+                              <p className={`text-xs mt-1 leading-snug ${isMissed ? "text-amber-700" : isCorrectSelected ? "text-emerald-700/70" : "text-red-600/70"}`}>
+                                {item.explanation}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-stone-500 mt-3 pt-2 border-t border-stone-100">
+                    Diferensial xallar: <span className={`font-medium ${differentialScore >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {differentialScore >= 0 ? `+${differentialScore}` : differentialScore}
+                    </span>
+                  </p>
                 </div>
               )}
 

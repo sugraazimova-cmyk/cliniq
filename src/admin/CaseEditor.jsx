@@ -319,10 +319,10 @@ function StepDiaqnoz({ draft, update }) {
   const [epInput, setEpInput] = useState('')
 
   function addDiff() {
-    update('differential_diagnosis', [...(draft.differential_diagnosis ?? []), { diagnosis: '' }])
+    update('differential_diagnosis', [...(draft.differential_diagnosis ?? []), { diagnosis: '', correct: false, explanation: '' }])
   }
-  function updateDiff(i, val) {
-    update('differential_diagnosis', draft.differential_diagnosis.map((d, idx) => idx === i ? { diagnosis: val } : d))
+  function updateDiff(i, field, val) {
+    update('differential_diagnosis', draft.differential_diagnosis.map((d, idx) => idx === i ? { ...d, [field]: val } : d))
   }
   const diffs = draft.differential_diagnosis ?? []
 
@@ -345,9 +345,27 @@ function StepDiaqnoz({ draft, update }) {
       <Field label="Diferensial diaqnozlar">
         <div className="space-y-2">
           {diffs.map((d, i) => (
-            <div key={i} className="flex gap-2">
-              <Input value={d.diagnosis} onChange={v => updateDiff(i, v)} placeholder="Diaqnoz adı..." />
-              <RemoveBtn onClick={() => update('differential_diagnosis', diffs.filter((_, j) => j !== i))} />
+            <div key={i} className="space-y-1.5">
+              <div className="flex gap-2 items-center">
+                <Input value={d.diagnosis} onChange={v => updateDiff(i, 'diagnosis', v)} placeholder="Diaqnoz adı..." />
+                <label className={`flex items-center gap-1.5 shrink-0 cursor-pointer text-sm ${d.correct ? 'text-emerald-600 font-medium' : 'text-stone-500'}`}>
+                  <input
+                    type="checkbox"
+                    checked={!!d.correct}
+                    onChange={e => updateDiff(i, 'correct', e.target.checked)}
+                    className="accent-emerald-600"
+                  />
+                  Düzgün
+                </label>
+                <RemoveBtn onClick={() => update('differential_diagnosis', diffs.filter((_, j) => j !== i))} />
+              </div>
+              <input
+                type="text"
+                value={d.explanation ?? ''}
+                onChange={e => updateDiff(i, 'explanation', e.target.value)}
+                placeholder="Klinik izahat (tələbəyə göstəriləcək)..."
+                className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
             </div>
           ))}
           <AddButton onClick={addDiff} label="Diferensial əlavə et" />
