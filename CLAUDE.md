@@ -21,13 +21,13 @@ npm run preview   # Preview production build
 ### Page flow (state-based routing — no React Router)
 
 ```
-AuthScreen → FeaturesPage → CasesPage (specialty list → cases) → Case flow (6 steps)
-                         → FlashcardsPage
-                         → AdminPage (admin only)
+LandingPage (+ AuthModal overlay) → FeaturesPage → CasesPage (specialty list → cases) → Case flow (6 steps)
+                                                 → FlashcardsPage
+                                                 → AdminPage (admin only)
 ```
 
 Routing is controlled by state variables in `App.jsx`:
-- `session` — null = show AuthScreen
+- `session` — null = show `LandingPage` (auth modal opens as overlay on the landing page)
 - `page` — `"features"` | `"cases"` | `"flashcards"` | `"admin"`
 - `selectedCase` — null = show CasesPage, non-null = show case flow
 - `isAdmin` — `session.user.email === import.meta.env.VITE_ADMIN_EMAIL`
@@ -36,12 +36,14 @@ Routing is controlled by state variables in `App.jsx`:
 
 | File | Purpose |
 |------|---------|
-| [src/App.jsx](src/App.jsx) | Root component. All case-flow state, scoring logic, and step rendering. |
-| [src/AuthScreen.jsx](src/AuthScreen.jsx) | Two-panel login/signup/forgot-password screen with animated ECG canvas. |
+| [src/App.jsx](src/App.jsx) | Root component. All case-flow state, scoring logic, and step rendering. No-session state renders `<LandingPage />` directly. |
+| [src/LandingPage.jsx](src/LandingPage.jsx) | Public marketing page. Fetches editable text from `landing_content` Supabase table (falls back to hardcoded defaults). Manages its own `showAuth` state — clicking any CTA opens `<AuthModal>` as an overlay. Fixed SVG background pattern (ECG traces, graph grid, lab flasks, circuit board). Section backgrounds are semi-transparent (75% opacity) so the pattern shows through. |
+| [src/AuthModal.jsx](src/AuthModal.jsx) | Auth form (login / signup / forgot-password) rendered as a modal overlay on top of the landing page. Navy backdrop with blur. Two-panel layout: animated ECG canvas left, form right. All Supabase auth logic lives here. Closes on backdrop click or Escape. `AuthScreen.jsx` is no longer used in the main flow. |
+| [src/AuthScreen.jsx](src/AuthScreen.jsx) | Legacy two-panel auth screen (kept but no longer rendered by default — `AuthModal` replaced it for the landing page flow). |
 | [src/FeaturesPage.jsx](src/FeaturesPage.jsx) | Hub page with bento grid of feature cards. Renders gear icon (admin) when `onEnterAdmin` prop is non-null. |
 | [src/CasesPage.jsx](src/CasesPage.jsx) | Two-level cases browser: specialty list → cases within specialty. |
 | [src/ProfileDrawer.jsx](src/ProfileDrawer.jsx) | Slide-in drawer: profile edit, case history, bookmarks, per-case notes. |
-| [src/AdminPage.jsx](src/AdminPage.jsx) | 5-tab admin dashboard: Overview, Hallar, AI Generator, İstifadəçilər, Rəylər. |
+| [src/AdminPage.jsx](src/AdminPage.jsx) | 6-tab admin dashboard: Overview, Hallar, AI Generator, İstifadəçilər, Rəylər, Səhifə. |
 | [src/admin/CaseEditor.jsx](src/admin/CaseEditor.jsx) | 6-step editable case form used in both Cases tab and AI Generator review. Shows unsaved-changes confirmation on back. Differential items include `diagnosis`, `correct` checkbox, and `explanation` input. |
 | [src/FeedbackModal.jsx](src/FeedbackModal.jsx) | Floating modal for general feedback — 5-star rating + optional comment. Inserts to `feedback` table. |
 | [src/admin/caseDefaults.js](src/admin/caseDefaults.js) | `EMPTY_CASE` template exported separately to keep CaseEditor HMR-compatible. |
@@ -81,8 +83,9 @@ Each case row maps to: `id`, `title`, `specialty`, `difficulty`, `patient_summar
 | `notes` | Per-user, per-case text notes |
 | `feedback` | User ratings and comments — `{ user_id, rating (1–5), comment, page, case_id (integer, nullable) }` |
 | `feature_events` | Lightweight usage tracking — one row per event, `feature` column (e.g. `flashcard_generate`, `flashcard_parse`) |
+| `landing_content` | Single-row table (`id = 1`) storing editable landing page text: `hero_headline`, `hero_subheading`, `problem_body`, `cta_headline`, `cta_subtext`, `quote_text`, `updated_at`. Edited via the "Səhifə" tab in AdminPage. Read publicly by LandingPage on load. |
 
-All tables except `feature_events` have RLS policies scoped to `auth.uid() = user_id`.
+All tables except `feature_events` and `landing_content` have RLS policies scoped to `auth.uid() = user_id`.
 
 `feature_events` setup SQL:
 ```sql
