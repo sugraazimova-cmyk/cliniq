@@ -38,7 +38,8 @@ function ECGCanvas() {
       return 0
     }
 
-    function drawLine(yCenterRatio, amplitudeRatio, alpha, patternPx, phase) {
+    function drawLine(yCenterRatio, amplitudeRatio, alpha, patternPx, rawPhase) {
+      const phase = Math.floor(rawPhase)
       const w = canvas.width
       const h = canvas.height
       const yCenter = h * yCenterRatio
