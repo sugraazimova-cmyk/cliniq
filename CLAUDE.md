@@ -36,7 +36,7 @@ Routing is controlled by state variables in `App.jsx`:
 
 | File | Purpose |
 |------|---------|
-| [src/App.jsx](src/App.jsx) | Root component. All case-flow state, scoring logic, and step rendering. No-session state renders `<LandingPage />` directly. |
+| [src/App.jsx](src/App.jsx) | Root component. All case-flow state, scoring logic, and step rendering. No-session state renders `<LandingPage />` directly. Contains shared `feedbackButton` JSX variable (floating MessageSquare button + animated "Rəyini bizimlə bölüş!" label on features page) rendered in all page branches. `feedbackType`/`feedbackStepIndex` state pre-fills FeedbackModal when opened from the "⚑ Məzmuna düzəliş" pill (shown fixed bottom-right during case steps 0–4). |
 | [src/LandingPage.jsx](src/LandingPage.jsx) | Public marketing page. Fetches editable text from `landing_content` Supabase table (falls back to hardcoded defaults). Manages its own `showAuth` state — clicking any CTA opens `<AuthModal>` as an overlay. Fixed SVG background pattern (ECG traces, graph grid, lab flasks, circuit board). Section backgrounds are semi-transparent (75% opacity) so the pattern shows through. |
 | [src/AuthModal.jsx](src/AuthModal.jsx) | Auth form (login / signup / forgot-password) rendered as a modal overlay on top of the landing page. Navy backdrop with blur. Two-panel layout: animated ECG canvas left, form right. All Supabase auth logic lives here. Closes on backdrop click or Escape. `AuthScreen.jsx` is no longer used in the main flow. |
 | [src/AuthScreen.jsx](src/AuthScreen.jsx) | Legacy two-panel auth screen (kept but no longer rendered by default — `AuthModal` replaced it for the landing page flow). |
@@ -45,7 +45,7 @@ Routing is controlled by state variables in `App.jsx`:
 | [src/ProfileDrawer.jsx](src/ProfileDrawer.jsx) | Slide-in drawer: profile edit, case history, bookmarks, per-case notes. |
 | [src/AdminPage.jsx](src/AdminPage.jsx) | 6-tab admin dashboard: Overview, Hallar, AI Generator, İstifadəçilər, Rəylər, Səhifə. |
 | [src/admin/CaseEditor.jsx](src/admin/CaseEditor.jsx) | 6-step editable case form used in both Cases tab and AI Generator review. Shows unsaved-changes confirmation on back. Differential items include `diagnosis`, `correct` checkbox, and `explanation` input. |
-| [src/FeedbackModal.jsx](src/FeedbackModal.jsx) | Floating modal for general feedback — 5-star rating + optional comment. Inserts to `feedback` table. |
+| [src/FeedbackModal.jsx](src/FeedbackModal.jsx) | Type-first feedback modal. Student picks category (Ümumi rəy / Məzmuna düzəliş / Xəta bildiriş / Təklif), then sees fields relevant to that type. Props: `caseId`, `caseTitle`, `cases[]`, `initialType`, `stepIndex`. When `caseId` is set (inside case flow), case title shows as read-only. When `caseId` is null (bento/cases page), student can pick a case from a dropdown. Inserts to `feedback` table with `type`, `step_index`, `case_id`. |
 | [src/admin/caseDefaults.js](src/admin/caseDefaults.js) | `EMPTY_CASE` template exported separately to keep CaseEditor HMR-compatible. |
 | [src/components/ui/bento-grid.jsx](src/components/ui/bento-grid.jsx) | BentoGrid + BentoCard components used by FeaturesPage. |
 | [src/components/ui/menu.jsx](src/components/ui/menu.jsx) | UserProfileSidebar used inside ProfileDrawer. |
@@ -81,7 +81,7 @@ Each case row maps to: `id`, `title`, `specialty`, `difficulty`, `patient_summar
 | `case_attempts` | Per-user attempt history with score |
 | `bookmarks` | User-bookmarked cases |
 | `notes` | Per-user, per-case text notes |
-| `feedback` | User ratings and comments — `{ user_id, rating (1–5), comment, page, case_id (integer, nullable) }` |
+| `feedback` | User feedback — `{ user_id, page, case_id (nullable), type ('general'\|'content_error'\|'bug'\|'feature'), rating (1–5, general only), comment, step_index (nullable), resolved (bool), resolved_at (timestamptz) }`. SQL migration required: `alter table feedback add column type text not null default 'general', add column step_index integer, add column resolved boolean not null default false, add column resolved_at timestamptz;` |
 | `feature_events` | Lightweight usage tracking — one row per event, `feature` column (e.g. `flashcard_generate`, `flashcard_parse`) |
 | `landing_content` | Single-row table (`id = 1`) storing editable landing page text: `hero_headline`, `hero_subheading`, `problem_body`, `cta_headline`, `cta_subtext`, `quote_text`, `updated_at`. Edited via the "Səhifə" tab in AdminPage. Read publicly by LandingPage on load. |
 

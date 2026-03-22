@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
 import { MessageSquare, Star, Home } from "lucide-react"
 import { supabase } from './supabase.js'
 import LandingPage from './LandingPage.jsx'
@@ -162,6 +163,31 @@ export default function App() {
     setFeedbackStepIndex(stepIdx)
     setShowFeedback(true)
   }
+
+  const feedbackButton = (
+    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2">
+      {page === 'features' && !selectedCase && (
+        <motion.span
+          initial={{ opacity: 0, x: 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 1.5, duration: 0.4 }}
+          className="bg-white border rounded-full px-3 py-1.5 text-xs font-medium shadow-md whitespace-nowrap cursor-pointer"
+          style={{ borderColor: '#5B65DC', color: '#5B65DC' }}
+          onClick={() => setShowFeedback(true)}
+        >
+          Rəyini bizimlə bölüş!
+        </motion.span>
+      )}
+      <button
+        onClick={() => setShowFeedback(true)}
+        className="flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
+        style={{ background: '#5B65DC' }}
+        title="Rəy bildirin"
+      >
+        <MessageSquare size={20} color="white" />
+      </button>
+    </div>
+  )
   const [inlineRating, setInlineRating] = useState(0)
   const [inlineHovered, setInlineHovered] = useState(0)
   const [inlineComment, setInlineComment] = useState('')
@@ -339,6 +365,18 @@ export default function App() {
           setBookmarkedIds={setBookmarkedIds}
           onSelectCase={(id) => { setSelectedCase(cases.find(x => String(x.id) === String(id)) ?? null); setPage("cases"); setShowProfile(false) }}
         />
+        {feedbackButton}
+        {showFeedback && (
+          <FeedbackModal
+            page="features"
+            caseId={null}
+            cases={cases}
+            session={session}
+            initialType={feedbackType}
+            stepIndex={feedbackStepIndex}
+            onClose={() => { setShowFeedback(false); setFeedbackType(null); setFeedbackStepIndex(null) }}
+          />
+        )}
       </>
     )
   }
@@ -366,6 +404,18 @@ export default function App() {
           setBookmarkedIds={setBookmarkedIds}
           onSelectCase={(id) => { setSelectedCase(cases.find(x => String(x.id) === String(id)) ?? null); setShowProfile(false) }}
         />
+        {feedbackButton}
+        {showFeedback && (
+          <FeedbackModal
+            page="cases"
+            caseId={null}
+            cases={cases}
+            session={session}
+            initialType={feedbackType}
+            stepIndex={feedbackStepIndex}
+            onClose={() => { setShowFeedback(false); setFeedbackType(null); setFeedbackStepIndex(null) }}
+          />
+        )}
       </>
     )
   }
@@ -1167,34 +1217,14 @@ export default function App() {
         </button>
       )}
 
-      {/* Floating feedback button with animated label on features page */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2">
-        {page === 'features' && !selectedCase && (
-          <motion.span
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 1.5, duration: 0.4 }}
-            className="bg-white border rounded-full px-3 py-1.5 text-xs font-medium shadow-md whitespace-nowrap cursor-pointer"
-            style={{ borderColor: '#5B65DC', color: '#5B65DC' }}
-            onClick={() => setShowFeedback(true)}
-          >
-            Rəyini bizimlə bölüş!
-          </motion.span>
-        )}
-        <button
-          onClick={() => setShowFeedback(true)}
-          className="flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
-          style={{ background: '#5B65DC' }}
-          title="Rəy bildirin"
-        >
-          <MessageSquare size={20} color="white" />
-        </button>
-      </div>
+      {feedbackButton}
 
       {showFeedback && (
         <FeedbackModal
           page={page}
           caseId={selectedCase?.id ?? null}
+          caseTitle={selectedCase?.title ?? null}
+          cases={cases}
           session={session}
           initialType={feedbackType}
           stepIndex={feedbackStepIndex}

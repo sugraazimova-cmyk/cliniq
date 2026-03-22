@@ -12,7 +12,7 @@ const TYPES = [
 
 const STEP_NAMES = ['Anamnez', 'Müayinə', 'Analizlər', 'Diaqnoz', 'Müalicə', 'Nəticə']
 
-export default function FeedbackModal({ onClose, page, caseId, session, initialType = null, stepIndex = null }) {
+export default function FeedbackModal({ onClose, page, caseId, caseTitle, cases = [], session, initialType = null, stepIndex = null }) {
   const [type, setType] = useState(initialType)
   const [rating, setRating] = useState(0)
   const [hovered, setHovered] = useState(0)
@@ -20,6 +20,7 @@ export default function FeedbackModal({ onClose, page, caseId, session, initialT
   const [whatIsWrong, setWhatIsWrong] = useState('')
   const [correctAnswer, setCorrectAnswer] = useState('')
   const [selectedStep, setSelectedStep] = useState(stepIndex)
+  const [selectedCaseId, setSelectedCaseId] = useState(caseId ?? null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -33,7 +34,7 @@ export default function FeedbackModal({ onClose, page, caseId, session, initialT
     const payload = {
       user_id: session.user.id,
       page,
-      case_id: caseId ?? null,
+      case_id: selectedCaseId ?? null,
       type: type ?? 'general',
       step_index: selectedStep ?? null,
     }
@@ -170,6 +171,32 @@ export default function FeedbackModal({ onClose, page, caseId, session, initialT
                   {/* ── Content error ── */}
                   {type === 'content_error' && (
                     <>
+                      {/* Case display or selector */}
+                      <div>
+                        <label className="text-xs font-medium text-stone-500 mb-1 block">Hal</label>
+                        {caseId ? (
+                          <div
+                            className="w-full rounded-xl border px-3 py-2 text-sm text-stone-700 bg-[#FAFAFD]"
+                            style={{ borderColor: '#EEEFFD' }}
+                          >
+                            {caseTitle ?? `Hal #${caseId}`}
+                          </div>
+                        ) : (
+                          <select
+                            value={selectedCaseId ?? ''}
+                            onChange={e => setSelectedCaseId(e.target.value === '' ? null : Number(e.target.value))}
+                            className="w-full rounded-xl border px-3 py-2 text-sm text-stone-700 outline-none transition-colors bg-white"
+                            style={{ borderColor: '#EEEFFD' }}
+                            onFocus={e => (e.target.style.borderColor = '#5B65DC')}
+                            onBlur={e => (e.target.style.borderColor = '#EEEFFD')}
+                          >
+                            <option value="">— Halı seçin (istəyə bağlı) —</option>
+                            {cases.map(c => (
+                              <option key={c.id} value={c.id}>{c.title}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                       <div>
                         <label className="text-xs font-medium text-stone-500 mb-1 block">Addım</label>
                         <select

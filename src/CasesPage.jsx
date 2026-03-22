@@ -81,7 +81,7 @@ export default function CasesPage({
           >
             <Home size={18} />
           </button>
-          <span className="text-xl font-bold" style={{ color: "#122056" }}>ClinIQ</span>
+          <img src="/logo.png" alt="ClinIQ" style={{ height: '120px', width: 'auto', mixBlendMode: 'multiply' }} />
         </div>
         <button
           onClick={() => setShowProfile(true)}
