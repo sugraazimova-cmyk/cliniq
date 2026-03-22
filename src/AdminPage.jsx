@@ -383,12 +383,24 @@ function UsersTab({ session }) {
 }
 
 // ─── Feedback tab ──────────────────────────────────────────────────────────
-function FeedbackTab({ session }) {
+const STEP_NAMES = ['Anamnez', 'Müayinə', 'Analizlər', 'Diaqnoz', 'Müalicə', 'Nəticə']
+const TYPE_LABELS = { general: 'Ümumi', content_error: 'Məzmuna düzəliş', bug: 'Xəta', feature: 'Təklif' }
+const TYPE_COLORS = {
+  general:       'bg-blue-50 text-blue-600',
+  content_error: 'bg-amber-50 text-amber-700',
+  bug:           'bg-red-50 text-red-600',
+  feature:       'bg-emerald-50 text-emerald-700',
+}
+
+function FeedbackTab({ session, onEditCase }) {
   const [rows, setRows] = useState([])
   const [userMap, setUserMap] = useState({})
   const [caseMap, setCaseMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [filterType, setFilterType] = useState('all')
+  const [filterResolved, setFilterResolved] = useState('open')
+  const [togglingId, setTogglingId] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -410,80 +422,159 @@ function FeedbackTab({ session }) {
       .finally(() => setLoading(false))
   }, [session])
 
+  async function toggleResolved(r) {
+    setTogglingId(r.id)
+    const newVal = !r.resolved
+    await supabase.from('feedback').update({
+      resolved: newVal,
+      resolved_at: newVal ? new Date().toISOString() : null,
+    }).eq('id', r.id)
+    setRows(prev => prev.map(x => x.id === r.id ? { ...x, resolved: newVal } : x))
+    setTogglingId(null)
+  }
+
+  async function handleEditCase(caseId) {
+    const { data } = await supabase.from('cases').select('*').eq('id', caseId).single()
+    if (data && onEditCase) onEditCase(data)
+  }
+
   if (loading) return <Spinner />
   if (error) return <ErrorMsg msg={error} />
 
-  if (rows.length === 0) return (
-    <p className="text-sm text-stone-400 py-8 text-center">Hələ rəy yoxdur</p>
-  )
+  const filtered = rows.filter(r => {
+    if (filterType !== 'all' && (r.type ?? 'general') !== filterType) return false
+    if (filterResolved === 'open' && r.resolved) return false
+    if (filterResolved === 'resolved' && !r.resolved) return false
+    return true
+  })
 
   function Stars({ rating }) {
+    if (!rating) return <span className="text-stone-300 text-xs">—</span>
     return (
       <span className="flex gap-0.5">
         {[1,2,3,4,5].map(i => (
-          <Star
-            key={i}
-            size={14}
-            fill={i <= rating ? '#F59E0B' : 'none'}
-            stroke={i <= rating ? '#F59E0B' : '#D1D5DB'}
-            strokeWidth={1.5}
-          />
+          <Star key={i} size={13} fill={i <= rating ? '#F59E0B' : 'none'} stroke={i <= rating ? '#F59E0B' : '#D1D5DB'} strokeWidth={1.5} />
         ))}
       </span>
     )
   }
 
-  function userId(id) {
-    return userMap[id] || `${id.slice(0, 8)}…`
-  }
-
   return (
-    <div className="overflow-x-auto rounded-2xl border border-[#EEEFFD]">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-[#EEEFFD] bg-[#FAFAFD]">
-            {['Tarix', 'Reytinq', 'Şərh', 'Səhifə', 'İstifadəçi'].map(h => (
-              <th key={h} className="text-left px-4 py-3 text-xs font-medium text-stone-400 uppercase tracking-wide whitespace-nowrap">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#EEEFFD]">
-          {rows.map(r => (
-            <tr key={r.id} className="bg-white hover:bg-[#FAFAFD] transition-colors">
-              <td className="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">
-                {new Date(r.created_at).toLocaleDateString('az-AZ', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </td>
-              <td className="px-4 py-3">
-                <Stars rating={r.rating} />
-              </td>
-              <td className="px-4 py-3 text-stone-600 max-w-xs">
-                {r.comment ? (
-                  <span className="line-clamp-2">{r.comment}</span>
-                ) : (
-                  <span className="text-stone-300">—</span>
-                )}
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs bg-[#EEEFFD] text-[#5B65DC] px-2 py-0.5 rounded-full whitespace-nowrap self-start">
-                    {r.page ?? '—'}
-                  </span>
-                  {r.case_id && (
-                    <span className="text-xs text-stone-500 max-w-[160px] truncate" title={caseMap[r.case_id] ?? `Case #${r.case_id}`}>
-                      {caseMap[r.case_id] ?? `Case #${r.case_id}`}
-                    </span>
-                  )}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-xs text-stone-500 whitespace-nowrap font-mono">
-                {r.user_id ? userId(r.user_id) : '—'}
-              </td>
-            </tr>
+    <div className="space-y-4">
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <select
+          value={filterType}
+          onChange={e => setFilterType(e.target.value)}
+          className="text-sm border border-[#EEEFFD] rounded-lg px-3 py-1.5 bg-white outline-none"
+          style={{ color: '#122056' }}
+        >
+          <option value="all">Bütün növlər</option>
+          <option value="general">Ümumi</option>
+          <option value="content_error">Məzmuna düzəliş</option>
+          <option value="bug">Xəta</option>
+          <option value="feature">Təklif</option>
+        </select>
+        <div className="flex rounded-lg border border-[#EEEFFD] overflow-hidden text-xs font-medium">
+          {[['open','Açıq'], ['resolved','Həll edildi'], ['all','Hamısı']].map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => setFilterResolved(val)}
+              className="px-3 py-1.5 transition-colors"
+              style={{
+                background: filterResolved === val ? '#5B65DC' : 'white',
+                color: filterResolved === val ? 'white' : '#475467',
+              }}
+            >
+              {label}
+            </button>
           ))}
-        </tbody>
-      </table>
+        </div>
+        <span className="text-xs text-stone-400">{filtered.length} nəticə</span>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-stone-400 py-8 text-center">Rəy tapılmadı</p>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-[#EEEFFD]">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#EEEFFD] bg-[#FAFAFD]">
+                {['Status', 'Tarix', 'Növ', 'Reytinq', 'Şərh', 'Hal / Addım', 'İstifadəçi'].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-stone-400 uppercase tracking-wide whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#EEEFFD]">
+              {filtered.map(r => (
+                <tr key={r.id} className={`transition-colors ${r.resolved ? 'bg-stone-50 opacity-60' : 'bg-white hover:bg-[#FAFAFD]'}`}>
+                  {/* Resolved toggle */}
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={!!r.resolved}
+                      disabled={togglingId === r.id}
+                      onChange={() => toggleResolved(r)}
+                      className="w-4 h-4 rounded accent-emerald-600 cursor-pointer"
+                      title={r.resolved ? 'Həll edilib' : 'Açıq'}
+                    />
+                  </td>
+                  {/* Date */}
+                  <td className="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">
+                    {new Date(r.created_at).toLocaleDateString('az-AZ', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </td>
+                  {/* Type badge */}
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${TYPE_COLORS[r.type ?? 'general']}`}>
+                      {TYPE_LABELS[r.type ?? 'general'] ?? r.type}
+                    </span>
+                  </td>
+                  {/* Rating */}
+                  <td className="px-4 py-3">
+                    <Stars rating={r.rating} />
+                  </td>
+                  {/* Comment */}
+                  <td className="px-4 py-3 text-stone-600 max-w-xs">
+                    {r.comment ? (
+                      <span className="line-clamp-2 text-xs">{r.comment}</span>
+                    ) : (
+                      <span className="text-stone-300">—</span>
+                    )}
+                  </td>
+                  {/* Case + step */}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-0.5 min-w-[120px]">
+                      {r.case_id ? (
+                        <button
+                          onClick={() => handleEditCase(r.case_id)}
+                          className="text-xs text-left font-medium hover:underline truncate max-w-[150px]"
+                          style={{ color: '#5B65DC' }}
+                          title={caseMap[r.case_id] ?? `Case #${r.case_id}`}
+                        >
+                          {caseMap[r.case_id] ?? `Case #${r.case_id}`}
+                        </button>
+                      ) : (
+                        <span className="text-xs bg-[#EEEFFD] text-[#5B65DC] px-2 py-0.5 rounded-full self-start">
+                          {r.page ?? '—'}
+                        </span>
+                      )}
+                      {r.step_index != null && (
+                        <span className="text-xs text-stone-400">{STEP_NAMES[r.step_index] ?? `Addım ${r.step_index}`}</span>
+                      )}
+                    </div>
+                  </td>
+                  {/* User */}
+                  <td className="px-4 py-3 text-xs text-stone-500 whitespace-nowrap font-mono">
+                    {r.user_id ? (userMap[r.user_id] || `${r.user_id.slice(0, 8)}…`) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
@@ -643,7 +734,7 @@ export default function AdminPage({ session, onBack }) {
             {activeTab === 'cases'     && <CaseList session={session} onEdit={handleEdit} />}
             {activeTab === 'generator' && <AiGenerator session={session} onEdit={handleEdit} />}
             {activeTab === 'users'     && <UsersTab session={session} />}
-            {activeTab === 'feedback'  && <FeedbackTab session={session} />}
+            {activeTab === 'feedback'  && <FeedbackTab session={session} onEditCase={c => { handleEdit(c); setActiveTab('cases') }} />}
             {activeTab === 'landing'   && <LandingTab />}
           </motion.div>
         </AnimatePresence>

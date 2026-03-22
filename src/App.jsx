@@ -154,6 +154,14 @@ export default function App() {
 
   const [showProfile, setShowProfile] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
+  const [feedbackType, setFeedbackType] = useState(null)
+  const [feedbackStepIndex, setFeedbackStepIndex] = useState(null)
+
+  function openStepFeedback(stepIdx) {
+    setFeedbackType('content_error')
+    setFeedbackStepIndex(stepIdx)
+    setShowFeedback(true)
+  }
   const [inlineRating, setInlineRating] = useState(0)
   const [inlineHovered, setInlineHovered] = useState(0)
   const [inlineComment, setInlineComment] = useState('')
@@ -1148,22 +1156,49 @@ export default function App() {
         onSelectCase={(id) => { setSelectedCase(cases.find(x => String(x.id) === String(id)) ?? null); setPage('cases'); setShowProfile(false) }}
       />
 
-      {/* Floating feedback button */}
-      <button
-        onClick={() => setShowFeedback(true)}
-        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
-        style={{ background: '#5B65DC' }}
-        title="Rəy bildirin"
-      >
-        <MessageSquare size={20} color="white" />
-      </button>
+      {/* Məzmuna düzəliş button — visible during case steps 0-4 */}
+      {selectedCase && currentStep < 5 && (
+        <button
+          onClick={() => openStepFeedback(currentStep)}
+          className="fixed bottom-24 right-6 z-50 flex items-center gap-1.5 px-3 py-2 rounded-full shadow-md text-xs font-medium border transition-all hover:scale-105 active:scale-95 animate-pulse"
+          style={{ background: 'white', borderColor: '#5B65DC', color: '#5B65DC', animationDuration: '2.5s' }}
+        >
+          ⚑ Məzmuna düzəliş
+        </button>
+      )}
+
+      {/* Floating feedback button with animated label on features page */}
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2">
+        {page === 'features' && !selectedCase && (
+          <motion.span
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1.5, duration: 0.4 }}
+            className="bg-white border rounded-full px-3 py-1.5 text-xs font-medium shadow-md whitespace-nowrap cursor-pointer"
+            style={{ borderColor: '#5B65DC', color: '#5B65DC' }}
+            onClick={() => setShowFeedback(true)}
+          >
+            Rəyini bizimlə bölüş!
+          </motion.span>
+        )}
+        <button
+          onClick={() => setShowFeedback(true)}
+          className="flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95"
+          style={{ background: '#5B65DC' }}
+          title="Rəy bildirin"
+        >
+          <MessageSquare size={20} color="white" />
+        </button>
+      </div>
 
       {showFeedback && (
         <FeedbackModal
           page={page}
           caseId={selectedCase?.id ?? null}
           session={session}
-          onClose={() => setShowFeedback(false)}
+          initialType={feedbackType}
+          stepIndex={feedbackStepIndex}
+          onClose={() => { setShowFeedback(false); setFeedbackType(null); setFeedbackStepIndex(null) }}
         />
       )}
     </div>
