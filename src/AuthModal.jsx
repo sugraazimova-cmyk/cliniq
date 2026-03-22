@@ -151,10 +151,6 @@ export default function AuthModal({ onClose }) {
     setResetSent(true)
   }
 
-  function switchMode() {
-    setMode(mode === "login" ? "signup" : "login")
-    setError(null); setFullName(""); setEmail(""); setPassword(""); setConfirmPassword("")
-  }
 
   const inputClass = "w-full border border-[#EEEFFD] rounded-lg px-3 py-2.5 text-sm outline-none transition-all placeholder:text-[#5B65DC]/30"
     + " focus:border-[#5B65DC] focus:ring-2 focus:ring-[#5B65DC]/10 text-[#122056] bg-[#FAFAFD]"
@@ -202,9 +198,9 @@ export default function AuthModal({ onClose }) {
           {/* Left panel — ECG animation */}
           <div className="hidden md:flex md:w-5/12 relative overflow-hidden flex-col" style={{ background: "#EEEFFD" }}>
             <ECGCanvas />
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
-              <h2 className="text-3xl font-bold mb-1 text-center" style={{ color: "#122056" }}>ClinIQ</h2>
-              <p className="text-sm font-semibold text-center max-w-xs mb-3" style={{ color: "#5B65DC" }}>
+            <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center p-8 pb-12">
+              <img src="/logo.png" alt="ClinIQ" className="h-24 w-auto -mb-2" style={{ mixBlendMode: 'multiply' }} />
+              <p className="text-sm font-semibold text-center max-w-xs mb-1" style={{ color: "#5B65DC" }}>
                 Tibb tələbələri üçün ağıllı tədris mühiti
               </p>
               <p className="text-xs text-center max-w-xs leading-relaxed" style={{ color: "rgba(18,32,86,0.6)" }}>

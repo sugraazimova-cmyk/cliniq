@@ -386,6 +386,7 @@ function UsersTab({ session }) {
 function FeedbackTab({ session }) {
   const [rows, setRows] = useState([])
   const [userMap, setUserMap] = useState({})
+  const [caseMap, setCaseMap] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -393,13 +394,17 @@ function FeedbackTab({ session }) {
     Promise.all([
       supabase.from('feedback').select('*').order('created_at', { ascending: false }),
       adminCall('users', {}, session.access_token),
+      supabase.from('cases').select('id, title'),
     ])
-      .then(([{ data, error: err }, usersData]) => {
+      .then(([{ data, error: err }, usersData, { data: casesData }]) => {
         if (err) throw new Error(err.message)
         setRows(data ?? [])
-        const map = {}
-        for (const u of usersData.users ?? []) map[u.id] = u.email
-        setUserMap(map)
+        const umap = {}
+        for (const u of usersData.users ?? []) umap[u.id] = u.email
+        setUserMap(umap)
+        const cmap = {}
+        for (const c of casesData ?? []) cmap[c.id] = c.title
+        setCaseMap(cmap)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -461,9 +466,16 @@ function FeedbackTab({ session }) {
                 )}
               </td>
               <td className="px-4 py-3">
-                <span className="text-xs bg-[#EEEFFD] text-[#5B65DC] px-2 py-0.5 rounded-full whitespace-nowrap">
-                  {r.page ?? '—'}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs bg-[#EEEFFD] text-[#5B65DC] px-2 py-0.5 rounded-full whitespace-nowrap self-start">
+                    {r.page ?? '—'}
+                  </span>
+                  {r.case_id && (
+                    <span className="text-xs text-stone-500 max-w-[160px] truncate" title={caseMap[r.case_id] ?? `Case #${r.case_id}`}>
+                      {caseMap[r.case_id] ?? `Case #${r.case_id}`}
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-4 py-3 text-xs text-stone-500 whitespace-nowrap font-mono">
                 {r.user_id ? userId(r.user_id) : '—'}

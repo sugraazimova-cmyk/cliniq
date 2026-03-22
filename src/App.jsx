@@ -380,7 +380,7 @@ export default function App() {
             >
               <Home size={18} />
             </button>
-            <span className="text-xl font-medium text-indigo-700">ClinIQ</span>
+            <img src="/logo.png" alt="ClinIQ" style={{ height: '120px', width: 'auto', mixBlendMode: 'multiply' }} />
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">

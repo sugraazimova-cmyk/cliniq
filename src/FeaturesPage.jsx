@@ -62,7 +62,7 @@ export default function FeaturesPage({ session, onEnterCases, onEnterFlashcards,
     <div className="min-h-screen" style={{ background: "#FAFAFD" }}>
       {/* Header */}
       <header className="border-b border-[#EEEFFD] bg-white px-6 py-4 flex justify-between items-center">
-        <span className="text-xl font-bold" style={{ color: "#122056" }}>ClinIQ</span>
+        <img src="/logo.png" alt="ClinIQ" style={{ height: '120px', width: 'auto', mixBlendMode: 'multiply' }} />
         <div className="flex items-center gap-3">
           {onEnterAdmin && (
             <button

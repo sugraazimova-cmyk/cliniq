@@ -32,7 +32,7 @@ export default function LandingPage() {
       {/* ── SECTION 1: Navbar ─────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-[#EEEFFD] px-6 py-4" style={{ position: 'relative', zIndex: 50 }}>
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <span className="text-[#122056] font-semibold text-lg tracking-tight">ClinIQ</span>
+          <img src="/logo.png" alt="ClinIQ" style={{ height: '120px', width: 'auto', mixBlendMode: 'multiply' }} />
           <button
             onClick={() => setShowAuth(true)}
             className="text-[#5B65DC] font-medium text-sm hover:opacity-80 transition-opacity">
